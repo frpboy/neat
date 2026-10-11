@@ -73,6 +73,13 @@ public sealed partial class Win : Window
         // A closed window must stop repainting itself when the colour changes.
         App.Look.Changed -= Paint;
 
+        // XAML keeps raising LayoutUpdated while the window is torn down, but
+        // Holes() needs AppWindow, which is gone by then. The exception it threw
+        // was unhandled, so Windows fail-fasted the process on every normal exit
+        // (0xc000027b) and wrote a crash dump. Stop it from running at all.
+        _closed = true;
+        bar.LayoutUpdated -= BarLayout;
+
         if (AppWindow.Presenter is not OverlappedPresenter p)
             return;
 

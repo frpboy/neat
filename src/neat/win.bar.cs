@@ -18,6 +18,9 @@ public sealed partial class Win
     // Last click-through regions handed to the system, so identical ones are not sent again.
     private RectInt32[] _holes = Array.Empty<RectInt32>();
 
+    // Set once the window has closed. After that AppWindow is no longer usable.
+    private bool _closed;
+
     private void BarInit()
     {
         // The content reaches the top edge and the whole bar is the drag area.
@@ -31,7 +34,8 @@ public sealed partial class Win
 
         // Buttons inside a draggable bar only receive clicks where the system
         // has been told to pass them through (see Holes).
-        bar.LayoutUpdated += (s, e) => Holes();
+        // A named handler, so OnClosed can take it off again (see _closed).
+        bar.LayoutUpdated += BarLayout;
 
         Accel(VirtualKey.C, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, Area.Page, "Copy link", () => _ = CopyLink());
 
@@ -43,6 +47,11 @@ public sealed partial class Win
         Accel(VirtualKey.E, VirtualKeyModifiers.Control, Area.Navigation, "Search or enter address", () => ShowBar(true));
     }
 
+    private void BarLayout(object? sender, object e)
+    {
+        Holes();
+    }
+
     /// <summary>
     /// Tells the system which rectangles of the title bar are buttons rather
     /// than window-drag area. Positions come from the buttons themselves and are
@@ -51,7 +60,9 @@ public sealed partial class Win
     /// </summary>
     private void Holes()
     {
-        if (root.XamlRoot is null)
+        // Layout is still reported while the window closes, when AppWindow is
+        // already gone and using it would throw.
+        if (_closed || root.XamlRoot is null)
             return;
 
         var k = root.XamlRoot.RasterizationScale;
