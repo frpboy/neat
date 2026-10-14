@@ -39,12 +39,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Windows App SDK 1.8.12. Pinned to an exact version on purpose so
-         builds are reproducible. Newer 2.x releases exist; moving up is a
-         separate, deliberate step once the basics work. The metapackage
-         brings in the WinUI 3 WebView2 control, the Windows SDK build tools
-         and CsWinRT transitively, so none of those are listed here. -->
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
+    <!-- Windows App SDK 2.5.1 (stable, 16 Sep 2026). Pinned to an exact version
+         on purpose so builds are reproducible. Moved up from 1.8.12 to pick up
+         the XAML crash fixes of the 2.x line (ListView, popups, shutdown).
+         From 2.0 on the version is plain SemVer (no more 1.8.260921001 style).
+         The metapackage brings in the WinUI 3 WebView2 control, the Windows
+         SDK build tools and CsWinRT transitively, so none of those are listed
+         here. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
 
     <!-- Fixed Version WebView2 runtime, bundled next to neat.exe in a
          "WebView2" folder (copied automatically on build/publish). Same
