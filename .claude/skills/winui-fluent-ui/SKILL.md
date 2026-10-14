@@ -7,7 +7,7 @@ description: Conventions for icons and Fluent-style UI in the neat browser repo 
 
 ## Platform baseline
 
-neat is a WinUI 3 browser: Windows App SDK 1.8, .NET 8, x64 only, unpackaged (`WindowsPackageType` is `None`), self-contained, with a Fixed Version WebView2 runtime bundled next to `neat.exe`. Because it is unpackaged, there is no package identity, so be wary of Windows APIs that require one.
+neat is a WinUI 3 browser: Windows App SDK 2.5, .NET 8, x64 only, unpackaged (`WindowsPackageType` is `None`), self-contained, with a Fixed Version WebView2 runtime bundled next to `neat.exe`. Because it is unpackaged, there is no package identity, so be wary of Windows APIs that require one.
 
 **Supported Windows:** Windows 11 and Windows 10. `neat.csproj` declares `TargetPlatformMinVersion` as `10.0.17763` (Windows 10 1809). The exact oldest Windows 10 build the project wants to support is a decision for the user, so do not invent a minimum version or edit that property unprompted. If a task depends on it, ask.
 
