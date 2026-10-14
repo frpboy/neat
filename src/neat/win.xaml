@@ -230,8 +230,14 @@
                     SelectionMode="Single"
                     SelectionChanged="list_SelectionChanged">
                     <!-- Soft pill for the selected tab and a light wash on hover,
-                         no accent bar. -->
+                         no accent bar. The accent bar is switched off for real
+                         (not just painted transparent): with it on, hovering a
+                         selected row can reach XAML code that sets the bar's
+                         background without checking that the bar exists, and
+                         Microsoft.UI.Xaml.dll crashes with an access violation
+                         (CListViewBaseItemChrome::SetSelectionIndicatorBackground). -->
                     <ListView.Resources>
+                        <x:Boolean x:Key="ListViewItemSelectionIndicatorVisualEnabled">False</x:Boolean>
                         <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#1AFFFFFF"/>
                         <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="#26FFFFFF"/>
                         <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#33FFFFFF"/>
