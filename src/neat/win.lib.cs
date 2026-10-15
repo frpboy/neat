@@ -88,7 +88,8 @@ public sealed partial class Win
 
     /// <summary>
     /// What the Library changes about the sidebar, put on top of what Layout() set. Layout() calls
-    /// this at its end and does nothing else differently, so the sidebar's own geometry is untouched.
+    /// this just before SideGrain(), and does nothing else differently, so with the Library closed
+    /// the sidebar's own geometry is untouched.
     /// </summary>
     private void LibLayout()
     {
@@ -98,9 +99,23 @@ public sealed partial class Win
         // A floating sidebar is Bite wider than its panel (it bites into the window border).
         side.Width = LibW + (_dock ? 0 : Bite);
 
+        if (_dock)
+        {
+            // Docked, the panel sits 6px below the title bar, but the page starts right at
+            // the title bar's bottom edge. Wider than its own column the panel then leaves a
+            // strip of page showing above it. So it takes the floating panel's top: it bites
+            // Bite pixels into the title bar row, where the corners sit on the window
+            // gradient and no notch of page shows through them. The padding grows by what the
+            // margin gives up, so the content stays where it is. Left, right and bottom stay
+            // as docked, so the panel's bottom lines up with the page's.
+            side.Margin = new Thickness(6, -Bite, 6, 6);
+            side.Padding = new Thickness(10, 16 + Bite, 10, 10);
+        }
+
         // Docked, the sidebar is see-through (it sits on the window's own gradient). Wider than
         // that spot it would show the page through, so it gets the same opaque copy of the
-        // gradient a floating one has, and the same edge.
+        // gradient a floating one has, and the same edge. This comes after the margin above:
+        // the gradient is mapped from where the panel's corner sits.
         side.Background = PeekBrush();
         side.BorderBrush = _edge;
     }

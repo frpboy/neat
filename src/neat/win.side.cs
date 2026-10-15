@@ -158,11 +158,12 @@ public sealed partial class Win
         // With no sidebar beside it the page gets a margin on the left too.
         frame.Margin = new Thickness(_dock ? 0 : 6, 0, 6, 6);
 
+        // With the Library open the sidebar is wider and opaque (win.lib.cs). It may change the
+        // panel's margin and padding, so it runs before SideGrain, which reads them.
+        LibLayout();
+
         // A floating panel hides the window's grain, so it carries its own (see win.grain.cs).
         SideGrain();
-
-        // With the Library open the sidebar is wider and opaque (win.lib.cs). Nothing above is changed.
-        LibLayout();
     }
 
     /// <summary>
