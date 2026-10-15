@@ -33,6 +33,7 @@ public sealed partial class Win : Window
         SideInit();
         KeysInit();
         PaintInit();
+        LibInit();
 
         // The first tab opens once the window is up.
         root.Loaded += OnLoaded;

@@ -69,17 +69,22 @@ public sealed class History
         }
     }
 
-    public async Task<List<Visit>> Recent(int limit = 200)
+    /// <summary>
+    /// Newest first. offset skips that many visits, so a list can be read a page at a time.
+    /// The id breaks ties, so two visits at the same instant keep the same order between pages.
+    /// </summary>
+    public async Task<List<Visit>> Recent(int limit = 200, int offset = 0)
     {
         using var c = await _db.Open();
         var cmd = c.CreateCommand();
-        cmd.CommandText = $"SELECT {Cols} FROM history ORDER BY visited_at DESC LIMIT $limit;";
+        cmd.CommandText = $"SELECT {Cols} FROM history ORDER BY visited_at DESC, id DESC LIMIT $limit OFFSET $offset;";
         cmd.Parameters.AddWithValue("$limit", limit);
+        cmd.Parameters.AddWithValue("$offset", offset);
         return await Read(cmd);
     }
 
-    /// <summary>Case-insensitive substring match on address or title, newest first.</summary>
-    public async Task<List<Visit>> Find(string query, int limit = 200)
+    /// <summary>Case-insensitive substring match on address or title, newest first. offset: see Recent.</summary>
+    public async Task<List<Visit>> Find(string query, int limit = 200, int offset = 0)
     {
         // Escape LIKE's own wildcards so "50%" or "a_b" are searched literally.
         var like = "%" + query.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
@@ -89,11 +94,12 @@ public sealed class History
         cmd.CommandText = $"""
             SELECT {Cols} FROM history
             WHERE url LIKE $like ESCAPE '\' OR title LIKE $like ESCAPE '\'
-            ORDER BY visited_at DESC
-            LIMIT $limit;
+            ORDER BY visited_at DESC, id DESC
+            LIMIT $limit OFFSET $offset;
             """;
         cmd.Parameters.AddWithValue("$like", like);
         cmd.Parameters.AddWithValue("$limit", limit);
+        cmd.Parameters.AddWithValue("$offset", offset);
         return await Read(cmd);
     }
 

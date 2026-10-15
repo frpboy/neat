@@ -56,7 +56,7 @@ public sealed partial class Win
         // The panel's colours depend on the window size, so keep them in step.
         root.SizeChanged += (s, e) =>
         {
-            if (!_dock)
+            if (!_dock || _lib)
                 side.Background = PeekBrush();
         };
 
@@ -74,8 +74,9 @@ public sealed partial class Win
             t.Stop();
 
             // Stay open while the pointer is on the sidebar or the left edge,
-            // or while the colour menu (which belongs to it) is open.
-            if (_peek && !_inSide && !_inHot && !_fly)
+            // or while the colour menu (which belongs to it) is open, or the
+            // Library: that one is closed with its back arrow or Esc.
+            if (_peek && !_inSide && !_inHot && !_fly && !_lib)
                 Peek(false);
         };
 
@@ -159,6 +160,9 @@ public sealed partial class Win
 
         // A floating panel hides the window's grain, so it carries its own (see win.grain.cs).
         SideGrain();
+
+        // With the Library open the sidebar is wider and opaque (win.lib.cs). Nothing above is changed.
+        LibLayout();
     }
 
     /// <summary>
@@ -191,6 +195,9 @@ public sealed partial class Win
 
     private void SetDock(bool on)
     {
+        // Docking or undocking changes what the sidebar is, so the Library closes first.
+        LibShut();
+
         _dock = on;
         _peek = false;
 
@@ -203,6 +210,10 @@ public sealed partial class Win
     /// <summary>Floats the sidebar over the page, or puts it away again. Does nothing while docked.</summary>
     private void Peek(bool on)
     {
+        // Asking a floating sidebar to go away (Ctrl+Alt+S) closes the Library with it.
+        if (_lib && !on)
+            LibShut();
+
         if (_dock || _peek == on)
             return;
 

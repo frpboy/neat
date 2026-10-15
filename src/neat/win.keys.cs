@@ -72,6 +72,12 @@ public sealed partial class Win
         Accel(VirtualKey.D, C, Area.Page, "Bookmark this page", () => _ = ToggleMark());
         Accel(VirtualKey.W, C | S, Area.Window, "Close window", Close);
         Accel(Comma, C, Area.Window, "Settings", ShowOpts);
+
+        // The Library (win.lib.cs). Esc is not here: everything in this table is also swallowed
+        // inside web pages, which would take Esc away from every site. LibView handles it.
+        Accel(VirtualKey.H, C, Area.Window, "Open History", () => ShowLib(Sec.History));
+        Accel(VirtualKey.J, C, Area.Window, "Open Downloads", () => ShowLib(Sec.Downloads));
+        Accel(VirtualKey.O, C | S, Area.Window, "Open Bookmarks", () => ShowLib(Sec.Bookmarks));
     }
 
     // ---- what the shortcuts do ----

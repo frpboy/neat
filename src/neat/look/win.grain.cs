@@ -131,7 +131,7 @@ public sealed partial class Win
     private void SideGrain()
     {
         var t = App.Look.Cur;
-        var show = t.Texture > 0 && !_dock;
+        var show = t.Texture > 0 && (!_dock || _lib);
 
         sidegrain.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         if (!show)
