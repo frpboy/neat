@@ -159,6 +159,22 @@
                 <Grid x:Name="host"/>
             </Border>
 
+            <!-- The Library (lib/libview.xaml), a panel of its own, as in Zen: it is not part of the
+                 sidebar and does not depend on the sidebar's state. It has no background, so the
+                 window colour and its grain run straight through it. While it is open the sidebar
+                 steps aside and the page is pushed to the right, keeping its size (win.lib.cs).
+                 Collapsed until win.lib.cs opens it. -->
+            <Border
+                x:Name="libpanel"
+                Grid.ColumnSpan="2"
+                Width="420"
+                HorizontalAlignment="Left"
+                Margin="6,6,0,6"
+                Padding="10"
+                Visibility="Collapsed">
+                <n:LibView x:Name="lib"/>
+            </Border>
+
             <!-- Left-edge hot zone. Only present while the sidebar is hidden:
                  the pointer touching it makes the sidebar float over the page. -->
             <Grid
@@ -352,10 +368,6 @@
                             <FontIcon Glyph="&#xE713;" FontSize="14"/>
                         </Button>
                     </Grid>
-
-                    <!-- The Library (lib/libview.xaml). Hidden until win.lib.cs opens it; then the new
-                         tab row, the tab list and the footer above are collapsed and this fills the panel. -->
-                    <n:LibView x:Name="lib" Grid.RowSpan="3" Visibility="Collapsed"/>
                 </Grid>
             </Border>
         </Grid>

@@ -52,9 +52,8 @@ public sealed partial class Win
                 g.GradientStops[i].Color = c[i];
         }
 
-        // The floating sidebar copies those colours, so it has to follow. So does the
-        // docked one while the Library is open: it is opaque then too (win.lib.cs).
-        if (!_dock || _lib)
+        // The floating sidebar copies those colours, so it has to follow.
+        if (!_dock)
             side.Background = PeekBrush();
 
         GrainPaint();

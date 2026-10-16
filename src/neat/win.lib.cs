@@ -1,27 +1,38 @@
+using System.Numerics;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
 namespace neat;
 
 /// <summary>
-/// The Library: a mode of the sidebar, not a window. While it is open the tab list, the
-/// "new tab" row and the footer give way to the Library view (lib/libview.xaml), and the
-/// sidebar grows wider, over the page.
+/// The Library, as in Zen: a panel of its own (libpanel in win.xaml), not a mode of the
+/// sidebar. Opening it makes the sidebar step aside, whatever state the sidebar is in
+/// (docked, hidden or peeking), and slides the panel in from the left edge. The panel has no
+/// background, so the window colour and its grain run straight through it.
 ///
-/// The page is never moved: the column that reserves room for a docked sidebar (col0,
-/// see Layout in win.side.cs) keeps its width, only the sidebar element itself gets
-/// wider and covers more of the page. Where it covers the page it has the opaque
-/// gradient the floating sidebar already uses (PeekBrush), so the page does not show through.
+/// The page is pushed to the right, not squeezed: it keeps its width and height, only its
+/// position changes, and what no longer fits is cut off by the window's edge. That is done
+/// with Translation, which moves the page without a layout pass, so the web view is never
+/// resized and the page inside does not reflow while the panel slides.
 ///
-/// It works from all three sidebar states. From the hidden one the sidebar floats (a peek)
-/// and stays up while the Library is open; the pointer leaving does not close it.
-/// The shortcuts that open it are in win.keys.cs.
+/// Closing it slides everything back, and the sidebar returns to the state it was in. The
+/// sidebar's own state (Layout in win.side.cs) is not changed by the Library; Layout just asks
+/// LibLayout below what to do about the panel and the page. The shortcuts that open it are in
+/// win.keys.cs.
 /// </summary>
 public sealed partial class Win
 {
-    // Width of the sidebar while the Library is open (the panel, padding included).
-    private const double LibW = 420;
+    // The panel's width and its gap to the window edge come from libpanel in win.xaml, so there
+    // is one place to change them. The page starts one window border (6px) after the panel.
+    private const double LibGap = 6;
+
+    // How far from the window's left edge the page starts while the Library is open.
+    private double LibEdge => libpanel.Margin.Left + libpanel.Width + LibGap;
 
     private bool _lib;
+
+    // Collapses the panel once it has slid out, so a closed Library takes no focus or input.
+    private DispatcherQueueTimer? _libGone;
 
     // The section the Library opens on when it is opened from the footer button: the last one used.
     private Sec _sec = Sec.History;
@@ -37,6 +48,27 @@ public sealed partial class Win
             _ = Star();
             _ = Stats();
         };
+
+        // The panel waits outside the left edge. This is set before the animations are switched
+        // on, so the window does not play a slide at startup.
+        libpanel.Translation = new Vector3((float)-LibEdge, 0, 0);
+        libpanel.Opacity = 0;
+        libpanel.IsHitTestVisible = false;
+
+        libpanel.OpacityTransition = new ScalarTransition { Duration = TimeSpan.FromMilliseconds(Fade) };
+        libpanel.TranslationTransition = new Vector3Transition { Duration = TimeSpan.FromMilliseconds(Slide) };
+        frame.TranslationTransition = new Vector3Transition { Duration = TimeSpan.FromMilliseconds(Slide) };
+
+        var t = DispatcherQueue.CreateTimer();
+        t.Interval = TimeSpan.FromMilliseconds(Slide + 50);
+        t.IsRepeating = false;
+        t.Tick += (s, e) =>
+        {
+            t.Stop();
+            if (!_lib)
+                libpanel.Visibility = Visibility.Collapsed;
+        };
+        _libGone = t;
     }
 
     /// <summary>Opens the Library on a section. If it is open already, switches to that section and reloads it.</summary>
@@ -48,24 +80,21 @@ public sealed partial class Win
         {
             _lib = true;
 
-            // Hidden sidebar: let it float over the page. Nothing happens when it is docked.
-            Peek(true);
+            // A peeking sidebar steps aside with the rest; closing the Library leaves it hidden.
+            _peek = false;
 
-            newtab.Visibility = Visibility.Collapsed;
-            list.Visibility = Visibility.Collapsed;
-            foot.Visibility = Visibility.Collapsed;
-            lib.Visibility = Visibility.Visible;
+            _libGone?.Stop();
+            libpanel.Visibility = Visibility.Visible;
 
-            Layout();
+            // A change made in the same pass that makes the element visible does not animate
+            // (it has no visual yet and would simply appear). Layout runs once it has one.
+            DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, Layout);
         }
 
         lib.Show(sec);
     }
 
-    /// <summary>
-    /// Closes the Library and brings the tab list back. A floating sidebar then closes itself
-    /// as usual once the pointer is away from it.
-    /// </summary>
+    /// <summary>Closes the Library: the panel slides out, the page slides back and the sidebar returns.</summary>
     private void LibShut()
     {
         if (!_lib)
@@ -74,50 +103,27 @@ public sealed partial class Win
         _lib = false;
 
         lib.Park();
-        lib.Visibility = Visibility.Collapsed;
-        newtab.Visibility = Visibility.Visible;
-        list.Visibility = Visibility.Visible;
-        foot.Visibility = Visibility.Visible;
-
-        // Back to the sidebar's own width, background and grain.
         Layout();
 
-        // If the pointer is already away, a floating sidebar should not hang on forever.
-        Leave();
+        // Once it is out of sight it is collapsed, see LibInit.
+        _libGone?.Start();
     }
 
     /// <summary>
-    /// What the Library changes about the sidebar, put on top of what Layout() set. Layout() calls
-    /// this just before SideGrain(), and does nothing else differently, so with the Library closed
-    /// the sidebar's own geometry is untouched.
+    /// The Library's part of Layout(): where the panel and the page are. The sidebar's own part
+    /// (it steps aside while the Library is open) is in Layout() itself.
     /// </summary>
     private void LibLayout()
     {
-        if (!_lib)
-            return;
+        libpanel.Translation = new Vector3(_lib ? 0 : (float)-LibEdge, 0, 0);
+        libpanel.Opacity = _lib ? 1 : 0;
+        libpanel.IsHitTestVisible = _lib;
 
-        // A floating sidebar is Bite wider than its panel (it bites into the window border).
-        side.Width = LibW + (_dock ? 0 : Bite);
-
-        if (_dock)
-        {
-            // Docked, the panel sits 6px below the title bar, but the page starts right at
-            // the title bar's bottom edge. Wider than its own column the panel then leaves a
-            // strip of page showing above it. So it takes the floating panel's top: it bites
-            // Bite pixels into the title bar row, where the corners sit on the window
-            // gradient and no notch of page shows through them. The padding grows by what the
-            // margin gives up, so the content stays where it is. Left, right and bottom stay
-            // as docked, so the panel's bottom lines up with the page's.
-            side.Margin = new Thickness(6, -Bite, 6, 6);
-            side.Padding = new Thickness(10, 16 + Bite, 10, 10);
-        }
-
-        // Docked, the sidebar is see-through (it sits on the window's own gradient). Wider than
-        // that spot it would show the page through, so it gets the same opaque copy of the
-        // gradient a floating one has, and the same edge. This comes after the margin above:
-        // the gradient is mapped from where the panel's corner sits.
-        side.Background = PeekBrush();
-        side.BorderBrush = _edge;
+        // The page keeps its layout (so its size does not change) and is moved sideways by the
+        // difference between where it starts now (right after a docked sidebar's column, or one
+        // border from the edge) and where it should start.
+        var at = _dock ? SideW : 6;
+        frame.Translation = new Vector3(_lib ? (float)(LibEdge - at) : 0, 0, 0);
     }
 
     private void libbtn_Click(object sender, RoutedEventArgs e)

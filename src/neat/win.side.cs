@@ -56,7 +56,7 @@ public sealed partial class Win
         // The panel's colours depend on the window size, so keep them in step.
         root.SizeChanged += (s, e) =>
         {
-            if (!_dock || _lib)
+            if (!_dock)
                 side.Background = PeekBrush();
         };
 
@@ -74,9 +74,8 @@ public sealed partial class Win
             t.Stop();
 
             // Stay open while the pointer is on the sidebar or the left edge,
-            // or while the colour menu (which belongs to it) is open, or the
-            // Library: that one is closed with its back arrow or Esc.
-            if (_peek && !_inSide && !_inHot && !_fly && !_lib)
+            // or while the colour menu (which belongs to it) is open.
+            if (_peek && !_inSide && !_inHot && !_fly)
                 Peek(false);
         };
 
@@ -108,12 +107,17 @@ public sealed partial class Win
     /// <summary>Applies the current state to every piece of the window that depends on it.</summary>
     private void Layout()
     {
-        var shown = _dock || _peek;
+        // While the Library is open the sidebar steps aside, whatever its state: it slides out
+        // like a hidden one does, and comes back when the Library closes (see win.lib.cs).
+        var shown = (_dock || _peek) && !_lib;
 
         // Column 0 only reserves room for a docked sidebar; a peeking one
-        // floats over the page and takes none.
+        // floats over the page and takes none. The Library does not touch it: it moves the
+        // page with a translation, so the page keeps its size.
         col0.Width = new GridLength(_dock ? SideW : 0);
-        hot.Visibility = _dock ? Visibility.Collapsed : Visibility.Visible;
+
+        // No hot zone while the Library is open, or the sidebar would float up over it.
+        hot.Visibility = _dock || _lib ? Visibility.Collapsed : Visibility.Visible;
 
         // Hidden, the panel waits outside the left edge (the window cuts it
         // off), so showing it slides it in from the border and hiding it
@@ -158,12 +162,11 @@ public sealed partial class Win
         // With no sidebar beside it the page gets a margin on the left too.
         frame.Margin = new Thickness(_dock ? 0 : 6, 0, 6, 6);
 
-        // With the Library open the sidebar is wider and opaque (win.lib.cs). It may change the
-        // panel's margin and padding, so it runs before SideGrain, which reads them.
-        LibLayout();
-
         // A floating panel hides the window's grain, so it carries its own (see win.grain.cs).
         SideGrain();
+
+        // The Library's panel, and the page being pushed aside for it (win.lib.cs).
+        LibLayout();
     }
 
     /// <summary>
@@ -196,9 +199,6 @@ public sealed partial class Win
 
     private void SetDock(bool on)
     {
-        // Docking or undocking changes what the sidebar is, so the Library closes first.
-        LibShut();
-
         _dock = on;
         _peek = false;
 
@@ -211,11 +211,8 @@ public sealed partial class Win
     /// <summary>Floats the sidebar over the page, or puts it away again. Does nothing while docked.</summary>
     private void Peek(bool on)
     {
-        // Asking a floating sidebar to go away (Ctrl+Alt+S) closes the Library with it.
-        if (_lib && !on)
-            LibShut();
-
-        if (_dock || _peek == on)
+        // While the Library is open the sidebar stays out of the way.
+        if (_lib || _dock || _peek == on)
             return;
 
         _peek = on;
