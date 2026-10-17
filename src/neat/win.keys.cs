@@ -63,8 +63,8 @@ public sealed partial class Win
         Accel(VirtualKey.Left, A, Area.Navigation, "Back", Back);
         Accel(VirtualKey.Right, A, Area.Navigation, "Forward", Fwd);
         Accel(VirtualKey.Home, A, Area.Navigation, "Go to home page", GoHome);
-        Accel(VirtualKey.R, C, Area.Navigation, "Reload", () => _cur?.View.Reload());
-        Accel(VirtualKey.F5, VirtualKeyModifiers.None, Area.Navigation, "Reload", () => _cur?.View.Reload());
+        Accel(VirtualKey.R, C, Area.Navigation, "Reload", Reload);
+        Accel(VirtualKey.F5, VirtualKeyModifiers.None, Area.Navigation, "Reload", Reload);
         Accel(VirtualKey.R, C | S, Area.Navigation, "Reload without the cache", () => _ = HardReload());
         Accel(VirtualKey.F5, C, Area.Navigation, "Reload without the cache", () => _ = HardReload());
 
