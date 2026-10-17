@@ -206,6 +206,9 @@ public sealed partial class Win : Window
         // view must not be torn down from inside its own event.
         core.WindowCloseRequested += (s, e) =>
             DispatcherQueue.TryEnqueue(() => Shut(tab));
+
+        // Downloads belong to the app, not to WebView2's own bubble (win.dl.cs).
+        core.DownloadStarting += (s, e) => OnDownload(tab, e);
     }
 
     /// <summary>Makes a tab the visible one.</summary>

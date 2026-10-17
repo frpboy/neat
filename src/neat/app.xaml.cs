@@ -10,6 +10,7 @@ public partial class App : Application
     public static Store Cfg { get; private set; } = null!;
     public static History Hist { get; private set; } = null!;
     public static Bookmarks Marks { get; private set; } = null!;
+    public static Downloads Dl { get; private set; } = null!;
     public static Search Find { get; private set; } = null!;
     public static Look Look { get; private set; } = null!;
 
@@ -44,6 +45,7 @@ public partial class App : Application
         var db = new Db(Path.Combine(Env.Root, "browser.db"));
         Hist = new History(db);
         Marks = new Bookmarks(db);
+        Dl = new Downloads(db);
 
         try
         {
@@ -56,6 +58,18 @@ public partial class App : Application
             // window reports the problem where the history numbers would be.
             System.Diagnostics.Debug.WriteLine("[app] database init failed: " + ex.Message);
             Log.Error("db", ex, "database init failed");
+        }
+
+        // Downloads have a try of their own: a problem with the history tables must not
+        // take the download list with it. If this fails the list is empty and new downloads
+        // still work; they are just not remembered.
+        try
+        {
+            await Dl.Init();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("db", ex, "downloads init failed");
         }
 
         _win = new Win();

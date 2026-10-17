@@ -327,7 +327,18 @@
                             Background="Transparent"
                             BorderThickness="0"
                             ToolTipService.ToolTip="Library (Ctrl+H)">
-                            <FontIcon Glyph="&#xE8F1;" FontSize="14"/>
+                            <!-- The dot shows while a download is going (win.dl.cs); its colour is set in code. -->
+                            <Grid>
+                                <FontIcon Glyph="&#xE8F1;" FontSize="14"/>
+                                <Ellipse
+                                    x:Name="libdot"
+                                    Width="7"
+                                    Height="7"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,-3,-4,0"
+                                    Visibility="Collapsed"/>
+                            </Grid>
                         </Button>
 
                         <TextBlock

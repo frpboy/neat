@@ -42,6 +42,10 @@ public sealed partial class Win
         lib.Back += LibShut;
         lib.Opened += url => _ = Open(url);
 
+        // The dot on the button tells whether a download is going (win.dl.cs).
+        App.Dl.ActiveChanged += Dot;
+        Dot();
+
         // A bookmark or history entry went: the star in the address bar and the footer counters depend on them.
         lib.Edited += () =>
         {
