@@ -12,7 +12,7 @@ namespace neat;
 /// </summary>
 public sealed partial class DlList : UserControl
 {
-    // When the "more" button was last pressed (Environment.TickCount64). See list_ItemClick.
+    // When a button of a row ("copy link", "more") was last pressed (Environment.TickCount64). See list_ItemClick.
     private long _gone;
 
     public DlList()
@@ -74,7 +74,7 @@ public sealed partial class DlList : UserControl
 
     private void list_ItemClick(object sender, ItemClickEventArgs e)
     {
-        // Pressing "more" can also arrive here as a click on the row it sits in.
+        // Pressing a button of the row ("copy link", "more") can also arrive here as a click on the row it sits in.
         if (Environment.TickCount64 - _gone < 300)
             return;
 
@@ -88,6 +88,39 @@ public sealed partial class DlList : UserControl
 
         if (sender is FrameworkElement el && el.DataContext is Download d)
             Asked?.Invoke(d, el, null);
+    }
+
+    /// <summary>
+    /// Copies the address the file is downloaded from, and shows a check mark on the button for a
+    /// moment. Only the Download is needed, so the list does it itself instead of asking the page.
+    /// </summary>
+    private async void copy_Click(object sender, RoutedEventArgs e)
+    {
+        _gone = Environment.TickCount64;
+
+        // An async void handler: an exception that gets out of it ends the whole app.
+        try
+        {
+            if (sender is not Button b || b.DataContext is not Download d)
+                return;
+
+            if (!Clip.Text(d.Url))
+            {
+                await App.Dl.Flash(d, "Could not copy the link");
+                return;
+            }
+
+            if (b.Content is FontIcon ic)
+            {
+                ic.Glyph = "";
+                await Task.Delay(1200);
+                ic.Glyph = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("library", ex, "copy link");
+        }
     }
 
     private void row_Menu(object sender, RightTappedRoutedEventArgs e)
@@ -109,7 +142,10 @@ public sealed partial class DlList : UserControl
         Cross(sender, Visibility.Collapsed);
     }
 
-    /// <summary>Shows or hides the "more" button of a row. It is the only Button in the row.</summary>
+    /// <summary>
+    /// Shows or hides the buttons of a row. They sit together in one StackPanel, marked
+    /// Tag="tools" in dllist.xaml (the name and status panel of the row is a StackPanel too).
+    /// </summary>
     private static void Cross(object sender, Visibility v)
     {
         if (sender is not Grid g)
@@ -117,8 +153,8 @@ public sealed partial class DlList : UserControl
 
         foreach (var child in g.Children)
         {
-            if (child is Button b)
-                b.Visibility = v;
+            if (child is StackPanel p && p.Tag is "tools")
+                p.Visibility = v;
         }
     }
 }

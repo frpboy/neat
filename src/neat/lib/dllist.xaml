@@ -14,7 +14,8 @@
 
         <!-- File icon by type, name, status line, and a thin progress bar while it runs. The
              height of the row is fixed so rows do not jump when a bar appears or goes. The
-             "more" button shows on hover and opens the same menu as a right click. -->
+             "copy link" and "more" buttons show on hover; "more" opens the same menu as a
+             right click. -->
         <DataTemplate x:Key="row" x:DataType="n:Download">
             <Grid
                 Height="58"
@@ -47,20 +48,39 @@
                         Visibility="{x:Bind BarVis, Mode=OneWay}"/>
                 </StackPanel>
 
-                <!-- More (E712) is in both Segoe Fluent Icons and Segoe MDL2 Assets. -->
-                <Button
+                <!-- The buttons of the row, shown together on hover (DlList.Cross shows and hides
+                     this panel). Copy link (E71B) is the glyph of the title bar's copy button,
+                     and turns into a check mark (E73E) for a moment once it has copied. More (E712)
+                     opens the same menu as a right click. All three glyphs are in both Segoe
+                     Fluent Icons and Segoe MDL2 Assets. -->
+                <StackPanel
                     Grid.Column="2"
-                    Width="28"
-                    Height="28"
-                    Padding="0"
+                    Tag="tools"
+                    Orientation="Horizontal"
+                    Spacing="2"
                     VerticalAlignment="Center"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Visibility="Collapsed"
-                    Click="more_Click"
-                    ToolTipService.ToolTip="More">
-                    <FontIcon Glyph="&#xE712;" FontSize="14"/>
-                </Button>
+                    Visibility="Collapsed">
+                    <Button
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="copy_Click"
+                        ToolTipService.ToolTip="Copy link">
+                        <FontIcon Glyph="&#xE71B;" FontSize="14"/>
+                    </Button>
+                    <Button
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="more_Click"
+                        ToolTipService.ToolTip="More">
+                        <FontIcon Glyph="&#xE712;" FontSize="14"/>
+                    </Button>
+                </StackPanel>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>

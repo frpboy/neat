@@ -133,18 +133,9 @@ public sealed partial class Win
         if (string.IsNullOrEmpty(url))
             return;
 
-        try
-        {
-            var pk = new DataPackage();
-            pk.SetText(url);
-            Clipboard.SetContent(pk);
-        }
-        catch (Exception ex)
-        {
-            // The clipboard can be held by another program for an instant.
-            System.Diagnostics.Debug.WriteLine("[bar] copy failed: " + ex.Message);
+        // The clipboard can be held by another program for an instant (see Clip.Text).
+        if (!Clip.Text(url))
             return;
-        }
 
         copyic.Glyph = "\uE73E";
         await Task.Delay(1200);
