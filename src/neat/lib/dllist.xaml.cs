@@ -104,7 +104,7 @@ public sealed partial class DlList : UserControl
             if (sender is not Button b || b.DataContext is not Download d)
                 return;
 
-            if (!Clip.Text(d.Url))
+            if (!Copier.Text(d.Url))
             {
                 await App.Dl.Flash(d, "Could not copy the link");
                 return;

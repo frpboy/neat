@@ -133,8 +133,8 @@ public sealed partial class Win
         if (string.IsNullOrEmpty(url))
             return;
 
-        // The clipboard can be held by another program for an instant (see Clip.Text).
-        if (!Clip.Text(url))
+        // The clipboard can be held by another program for an instant (see Copier.Text).
+        if (!Copier.Text(url))
             return;
 
         copyic.Glyph = "\uE73E";
