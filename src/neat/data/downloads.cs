@@ -144,7 +144,7 @@ public sealed class Downloads
         _held.Add(target);
 
         var d = new Download(op.Uri, Path.GetFileName(target), target, DateTime.Now) { Op = op };
-        d.Move(0, op.TotalBytesToReceive ?? 0, 0, null);
+        d.Move(0, Expected(op), 0, null);
 
         Items.Insert(0, d);
         Recount();
@@ -312,7 +312,7 @@ public sealed class Downloads
         }
 
         var got = op.BytesReceived;
-        var total = op.TotalBytesToReceive ?? 0;
+        var total = Expected(op);
 
         switch (now)
         {
@@ -364,7 +364,7 @@ public sealed class Downloads
             return;
 
         var got = op.BytesReceived;
-        var total = op.TotalBytesToReceive ?? 0;
+        var total = Expected(op);
 
         // Bytes per second since the last reading, smoothed so the number does not jump about.
         var speed = d.Speed;
@@ -444,6 +444,16 @@ public sealed class Downloads
 
         var t = end - DateTimeOffset.Now;
         return t > TimeSpan.Zero && t < TimeSpan.FromDays(1) ? t : null;
+    }
+
+    /// <summary>
+    /// The size the server announced, or 0 when it did not. TotalBytesToReceive is a plain long,
+    /// not a nullable one, and says "not known" with a negative number (-1), so it cannot be
+    /// combined with ??. The rest of the code (Download.Percent, Download.Unknown) reads 0 as unknown.
+    /// </summary>
+    private static long Expected(CoreWebView2DownloadOperation op)
+    {
+        return Math.Max(0, op.TotalBytesToReceive);
     }
 
     private static long SizeOf(string path, long fallback)
