@@ -265,10 +265,14 @@ public sealed partial class Win : Window
         Back();
     }
 
+    // Back, Forward and Reload go through CoreWebView2 and do nothing while it does not
+    // exist yet. A tab's web view takes a second or two to start, and the WebView2 control
+    // throws if it is asked to navigate before that. Such a throw inside a click handler
+    // is an unhandled exception in XAML, which ends the whole app.
     private void Back()
     {
-        if (_cur is { View.CanGoBack: true })
-            _cur.View.GoBack();
+        if (_cur?.View.CoreWebView2 is { CanGoBack: true } core)
+            core.GoBack();
     }
 
     private void fwd_Click(object sender, RoutedEventArgs e)
@@ -278,13 +282,31 @@ public sealed partial class Win : Window
 
     private void Fwd()
     {
-        if (_cur is { View.CanGoForward: true })
-            _cur.View.GoForward();
+        if (_cur?.View.CoreWebView2 is { CanGoForward: true } core)
+            core.GoForward();
     }
 
     private void reload_Click(object sender, RoutedEventArgs e)
     {
-        _cur?.View.Reload();
+        Reload();
+    }
+
+    /// <summary>Reloads the selected tab. Nothing happens while its web view is still starting.</summary>
+    private void Reload()
+    {
+        var core = _cur?.View.CoreWebView2;
+        if (core is null)
+            return;
+
+        try
+        {
+            core.Reload();
+        }
+        catch (Exception ex)
+        {
+            // A reload that fails is not worth ending the app for; crash.log gets the details.
+            Log.Error("webview", ex, "reload failed");
+        }
     }
 
     // ---- bookmarks and stats ----
