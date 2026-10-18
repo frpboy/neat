@@ -119,16 +119,40 @@ public sealed class Look
     // ---- colours ----
 
     /// <summary>
-    /// Top, middle and bottom colours of the window. Every colour is mixed into
-    /// the window's base colour by the opacity, which keeps it soft, and by no
-    /// more than still leaves the text readable (see <see cref="MinContrast"/>).
+    /// Top, middle and bottom colours of the window gradient.
     ///
     /// One dot: its colour is at the top and the hue travels round the colour
     /// wheel by up to 240 degrees towards the bottom (the Gradient slider).
     /// Two dots: one at the top, the other at the bottom. Three dots: one each
     /// for top, middle and bottom.
+    ///
+    /// With the system blur on (see <see cref="Backdrop"/>) the colours are
+    /// translucent, so the blurred desktop shows through them, as in Zen. Without
+    /// it they are solid, which is what <see cref="OpaqueStops"/> always gives.
     /// </summary>
     public Windows.UI.Color[] Stops()
+    {
+        return Backdrop.Active ? Shape(Glass) : OpaqueStops();
+    }
+
+    /// <summary>
+    /// The same three colours as <see cref="Stops"/>, but always solid: every
+    /// colour is mixed into the window's base colour by the opacity, which keeps
+    /// it soft, and by no more than still leaves the text readable (see
+    /// <see cref="MinContrast"/>). The floating sidebar uses these, because a
+    /// panel over the page must not let the page show through.
+    /// </summary>
+    public Windows.UI.Color[] OpaqueStops()
+    {
+        return Shape(pad => Make(Window(pad)));
+    }
+
+    /// <summary>
+    /// Lays out the three stops (see <see cref="Stops"/> for how the dots map to
+    /// them) and gives each colour from the pad to <paramref name="paint"/>, which
+    /// decides how it is turned into the colour the window shows.
+    /// </summary>
+    private Windows.UI.Color[] Shape(Func<(byte R, byte G, byte B), Windows.UI.Color> paint)
     {
         var t = Cur;
         var spots = Spots();
@@ -140,20 +164,20 @@ public sealed class Look
 
             return new[]
             {
-                Window(Wheel.Rgb(angle, radius)),
-                Window(Wheel.Rgb(angle + span / 2, radius)),
-                Window(Wheel.Rgb(angle + span, radius)),
-            }.Select(Make).ToArray();
+                paint(Wheel.Rgb(angle, radius)),
+                paint(Wheel.Rgb(angle + span / 2, radius)),
+                paint(Wheel.Rgb(angle + span, radius)),
+            };
         }
 
         var a = Wheel.Rgb(spots[0].Angle, spots[0].Radius);
         var b = Wheel.Rgb(spots[1].Angle, spots[1].Radius);
 
         if (spots.Length == 2)
-            return new[] { Window(a), Window(Wheel.Blend(a, b, 0.5)), Window(b) }.Select(Make).ToArray();
+            return new[] { paint(a), paint(Wheel.Blend(a, b, 0.5)), paint(b) };
 
         var c = Wheel.Rgb(spots[2].Angle, spots[2].Radius);
-        return new[] { Window(a), Window(b), Window(c) }.Select(Make).ToArray();
+        return new[] { paint(a), paint(b), paint(c) };
     }
 
     /// <summary>The colour of every dot as the pad shows it (not yet mixed into the base), first dot first.</summary>
@@ -179,6 +203,29 @@ public sealed class Look
         var ink = dark ? ((byte)255, (byte)255, (byte)255) : ((byte)0, (byte)0, (byte)0);
 
         return Contrast.Legible(pad, Wheel.Base(dark), Cur.Opacity, ink, MinContrast);
+    }
+
+    /// <summary>How much of the base layer (black or white) is added under a colour over the blur.</summary>
+    private const double GlassOverlay = 0.3;
+
+    /// <summary>
+    /// A colour from the pad as it shows over the system blur. This is Zen's rule
+    /// for Windows (blendWithWhiteOverlay in ZenGradientGenerator.mjs): the colour
+    /// is first mixed with black (dark window) or white (light window), then given
+    /// the opacity as its alpha. The mixed-in layer is what keeps the text readable
+    /// over a bright or busy desktop; there is no contrast clamp here, because
+    /// what is behind a translucent colour is not known.
+    /// </summary>
+    private Windows.UI.Color Glass((byte R, byte G, byte B) pad)
+    {
+        var o = Cur.Opacity;
+        var layer = Cur.Dark ? ((byte)0, (byte)0, (byte)0) : ((byte)255, (byte)255, (byte)255);
+
+        // The share of the pad colour that is kept. It never drops below the opacity.
+        var keep = Math.Min(1, o + MinOpacity + GlassOverlay * (1 - (o + MinOpacity)));
+        var c = Wheel.Blend(pad, layer, keep);
+
+        return Windows.UI.Color.FromArgb((byte)Math.Round(o * 255), c.R, c.G, c.B);
     }
 
     private static Windows.UI.Color Make((byte R, byte G, byte B) c)

@@ -27,6 +27,10 @@ public sealed partial class Win : Window
         AppWindow.Resize(new SizeInt32(geo.W, geo.H));
         Closed += OnClosed;
 
+        // The system blur has to be on before the first Paint (look/win.paint.cs), because
+        // that decides whether the window colour is translucent (see look/backdrop.cs).
+        Backdrop.Apply(this);
+
         BarInit();
 
         list.ItemsSource = _tabs;

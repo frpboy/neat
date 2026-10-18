@@ -181,9 +181,12 @@ public sealed partial class Win
         if (root.Background is not LinearGradientBrush g || root.ActualWidth <= 0 || root.ActualHeight <= 0)
             return _solid;
 
+        // The window's own stops may be translucent (the system blur shows through them).
+        // The panel floats over the page, so it takes the solid version of the same colours.
+        var solid = App.Look.OpaqueStops();
         _pan.GradientStops.Clear();
-        foreach (var st in g.GradientStops)
-            _pan.GradientStops.Add(new GradientStop { Color = st.Color, Offset = st.Offset });
+        for (var i = 0; i < g.GradientStops.Count && i < solid.Length; i++)
+            _pan.GradientStops.Add(new GradientStop { Color = solid[i], Offset = g.GradientStops[i].Offset });
 
         // Where the panel's top-left corner sits in the window.
         var x = side.Margin.Left;
