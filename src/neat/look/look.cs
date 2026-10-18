@@ -49,7 +49,6 @@ public sealed class Look
 
         Cur.Hue = ((Cur.Hue % 360) + 360) % 360;
         Cur.Tone = Math.Clamp(Cur.Tone, 0, 1);
-        Cur.Spread = Math.Clamp(Cur.Spread, 0, 1);
         Cur.Opacity = Math.Clamp(Cur.Opacity, MinOpacity, MaxOpacity);
         Cur.Texture = Grain.Clamp(Cur.Texture);
         if (!Harmonies.Valid(Cur.Harmony))
@@ -121,10 +120,8 @@ public sealed class Look
     /// <summary>
     /// Top, middle and bottom colours of the window gradient.
     ///
-    /// One dot: its colour is at the top and the hue travels round the colour
-    /// wheel by up to 240 degrees towards the bottom (the Gradient slider).
-    /// Two dots: one at the top, the other at the bottom. Three dots: one each
-    /// for top, middle and bottom.
+    /// One dot: one flat colour, as in Zen. Two dots: one at the top, the other
+    /// at the bottom. Three dots: one each for top, middle and bottom.
     ///
     /// With the system blur on (see <see cref="Backdrop"/>) the colours are
     /// translucent, so the blurred desktop shows through them, as in Zen. Without
@@ -154,20 +151,12 @@ public sealed class Look
     /// </summary>
     private Windows.UI.Color[] Shape(Func<(byte R, byte G, byte B), Windows.UI.Color> paint)
     {
-        var t = Cur;
         var spots = Spots();
 
         if (spots.Length == 1)
         {
-            var span = 240 * t.Spread;
-            var (angle, radius) = spots[0];
-
-            return new[]
-            {
-                paint(Wheel.Rgb(angle, radius)),
-                paint(Wheel.Rgb(angle + span / 2, radius)),
-                paint(Wheel.Rgb(angle + span, radius)),
-            };
+            var one = paint(Wheel.Rgb(spots[0].Angle, spots[0].Radius));
+            return new[] { one, one, one };
         }
 
         var a = Wheel.Rgb(spots[0].Angle, spots[0].Radius);

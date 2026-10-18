@@ -44,13 +44,6 @@
                 <FontIcon Glyph="&#xE710;" FontSize="14"/>
             </Button>
         </StackPanel>
-        <Slider
-            x:Name="spread"
-            Header="Gradient"
-            Minimum="0"
-            Maximum="1"
-            StepFrequency="0.01"
-            ValueChanged="spread_Changed"/>
         <!-- Same limits as Look.MinOpacity and Look.MaxOpacity. -->
         <Slider
             x:Name="opacity"

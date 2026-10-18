@@ -45,9 +45,6 @@ public sealed class Tint
     /// <summary>How the dots on the pad relate to each other; it also decides how many there are.</summary>
     public Harmony Harmony { get; set; } = Harmony.Floating;
 
-    /// <summary>With one dot only: how far the hue travels from top to bottom, 0 (one flat colour) to 1.</summary>
-    public double Spread { get; set; } = 0.8;
-
     /// <summary>How strongly the picked colour shows over the window's base colour, 0.25 to 0.8.</summary>
     public double Opacity { get; set; } = 0.5;
 

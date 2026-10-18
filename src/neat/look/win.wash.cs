@@ -1,4 +1,7 @@
+using System.Numerics;
+using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
@@ -10,8 +13,7 @@ namespace neat;
 /// getGradient in ZenGradientGenerator.mjs). A single three-colour brush paints
 /// every spot of the window in some colour. Zen instead stacks layers that each
 /// fade to clear, so between and behind them the blurred desktop shows through
-/// untinted. That is most of why Zen looks glassy. A brush cannot hold several
-/// layers, so each layer is a rectangle in the <c>wash</c> grid (win.xaml).
+/// untinted. That is most of why Zen looks glassy.
 ///
 /// Two dots (colours a and b), as CSS lists them from the top layer down:
 ///   linear-gradient(150deg, a 30%, clear 120%)
@@ -20,31 +22,34 @@ namespace neat;
 ///   linear-gradient(-5deg, c 10%, clear 80%)
 ///   radial-gradient(circle at 95% 0%, b 0%, clear 75%)
 ///   radial-gradient(circle at 0% 0%, a 10%, clear 70%)
-/// One dot keeps the plain gradient of <see cref="Look.Stops"/> on the window
-/// itself (Zen paints a flat colour there; neat's hue travel stays as it was).
+/// One dot is one flat colour, painted by the window itself (see <see cref="Look.Stops"/>).
+///
+/// A brush cannot hold several layers, so the linear layers are rectangles in the
+/// <c>wash</c> grid (win.xaml). The two radial layers are not XAML brushes: a
+/// XAML RadialGradientBrush did not repaint when its colours were changed in place,
+/// which left the top corners stuck. They are drawn with the composition layer
+/// instead, whose colours change straight away, in sprite visuals hung on the
+/// <c>glow</c> grid, which sits under <c>wash</c> (the linear layer of the third dot
+/// has to be on top of them, as in Zen).
 ///
 /// Only used when the blur is on (<see cref="Backdrop.Active"/>). Without it the
-/// window keeps its solid gradient and this layer host stays hidden.
+/// window keeps its solid gradient and both hosts stay hidden.
 /// </summary>
 public sealed partial class Win
 {
-    // One rectangle per layer, the bottom one first.
-    private readonly Rectangle[] _layer = new Rectangle[3];
+    // One rectangle per linear layer, the bottom one first.
+    private readonly Rectangle[] _layer = new Rectangle[2];
 
     // Brushes are made once and changed in place (a window must not share them).
-    // A rectangle takes whichever kind its layer needs for the current dot count.
     private readonly LinearGradientBrush[] _lin =
     {
         new() { MappingMode = BrushMappingMode.Absolute },
         new() { MappingMode = BrushMappingMode.Absolute },
-        new() { MappingMode = BrushMappingMode.Absolute },
     };
 
-    private readonly RadialGradientBrush[] _rad =
-    {
-        new() { MappingMode = BrushMappingMode.Absolute },
-        new() { MappingMode = BrushMappingMode.Absolute },
-    };
+    // The two radial layers, bottom one first (top left, then top right). Made on first use.
+    private SpriteVisual[]? _spot;
+    private CompositionRadialGradientBrush[]? _spotBrush;
 
     /// <summary>True when the window gradient is drawn as layers: the blur is on and there are two or three dots.</summary>
     private bool Layered => Backdrop.Active && App.Look.Count > 1;
@@ -71,7 +76,10 @@ public sealed partial class Win
         var on = Layered;
         wash.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         if (!on)
+        {
+            glow.Visibility = Visibility.Collapsed;
             return;
+        }
 
         double w = root.ActualWidth, h = root.ActualHeight;
         if (w <= 0 || h <= 0)
@@ -84,15 +92,19 @@ public sealed partial class Win
 
             if (c.Length == 2)
             {
+                glow.Visibility = Visibility.Collapsed;
                 WashLine(0, _lin[0], c[1], w, h, -30, 1.2, 0.3);
                 WashLine(1, _lin[1], c[0], w, h, 150, 1.2, 0.3);
-                _layer[2].Visibility = Visibility.Collapsed;
             }
             else
             {
-                WashSpot(0, _rad[0], c[0], w, h, 0.00, 0.70, 0.10);
-                WashSpot(1, _rad[1], c[1], w, h, 0.95, 0.75, 0.00);
-                WashLine(2, _lin[2], c[2], w, h, -5, 0.8, 0.1);
+                _layer[0].Visibility = Visibility.Collapsed;
+                WashLine(1, _lin[1], c[2], w, h, -5, 0.8, 0.1);
+
+                WashSpotsInit();
+                WashSpot(0, c[0], w, h, 0.00, 0.70, 0.10);
+                WashSpot(1, c[1], w, h, 0.95, 0.75, 0.00);
+                glow.Visibility = Visibility.Visible;
             }
         }
         catch (Exception ex)
@@ -125,36 +137,11 @@ public sealed partial class Win
     }
 
     /// <summary>
-    /// Layer <paramref name="i"/> as CSS radial-gradient(circle at x 0%, c <paramref name="solid"/>, clear
-    /// <paramref name="reach"/>), where x is the share of the width. A CSS circle is as big as the distance to the
-    /// farthest corner, and the percentages count from that.
+    /// The three stops of one linear layer: the colour up to <paramref name="solid"/>, then the same colour
+    /// with no alpha at the end. Fading to the same colour (not to black) keeps the fade from going grey,
+    /// the way a CSS gradient fades to "transparent".
     /// </summary>
-    private void WashSpot(int i, RadialGradientBrush b, Windows.UI.Color c, double w, double h,
-        double x, double reach, double solid)
-    {
-        var cx = w * x;
-        var far = 0.0;
-        foreach (var kx in new[] { 0.0, w })
-            foreach (var ky in new[] { 0.0, h })
-                far = Math.Max(far, Math.Sqrt((cx - kx) * (cx - kx) + ky * ky));
-
-        var r = far * reach;
-        b.Center = new Point(cx, 0);
-        b.GradientOrigin = new Point(cx, 0);
-        b.RadiusX = r;
-        b.RadiusY = r;
-
-        WashFade(b.GradientStops, c, solid / reach);
-        _layer[i].Fill = b;
-        _layer[i].Visibility = Visibility.Visible;
-    }
-
-    /// <summary>
-    /// The three stops of one layer: the colour up to <paramref name="solid"/>, then the same colour with no
-    /// alpha at the end. Fading to the same colour (not to black) keeps the fade from going grey, the way a
-    /// CSS gradient fades to "transparent".
-    /// </summary>
-    private static void WashFade(System.Collections.Generic.IList<GradientStop> s, Windows.UI.Color c, double solid)
+    private static void WashFade(GradientStopCollection s, Windows.UI.Color c, double solid)
     {
         if (s.Count != 3)
         {
@@ -169,5 +156,66 @@ public sealed partial class Win
         s[1].Offset = solid;
         s[2].Color = Windows.UI.Color.FromArgb(0, c.R, c.G, c.B);
         s[2].Offset = 1;
+    }
+
+    /// <summary>Builds the two radial layers the first time they are needed and hangs them on <c>glow</c>.</summary>
+    private void WashSpotsInit()
+    {
+        if (_spot is not null)
+            return;
+
+        var compositor = ElementCompositionPreview.GetElementVisual(glow).Compositor;
+        var host = compositor.CreateContainerVisual();
+        var visuals = new SpriteVisual[2];
+        var brushes = new CompositionRadialGradientBrush[2];
+
+        for (var i = 0; i < 2; i++)
+        {
+            var brush = compositor.CreateRadialGradientBrush();
+            brush.MappingMode = CompositionMappingMode.Absolute;
+            for (var k = 0; k < 3; k++)
+                brush.ColorStops.Add(compositor.CreateColorGradientStop());
+
+            var visual = compositor.CreateSpriteVisual();
+            visual.Brush = brush;
+            host.Children.InsertAtTop(visual);   // the second one ends up above the first
+
+            visuals[i] = visual;
+            brushes[i] = brush;
+        }
+
+        ElementCompositionPreview.SetElementChildVisual(glow, host);
+        _spotBrush = brushes;
+        _spot = visuals;
+    }
+
+    /// <summary>
+    /// Radial layer <paramref name="i"/> as CSS radial-gradient(circle at x 0%, c <paramref name="solid"/>, clear
+    /// <paramref name="reach"/>), where x is the share of the width and the circle is on the top edge. A CSS
+    /// circle is as big as the distance to the farthest corner, and the percentages count from that.
+    /// </summary>
+    private void WashSpot(int i, Windows.UI.Color c, double w, double h, double x, double reach, double solid)
+    {
+        var cx = w * x;
+        var far = 0.0;
+        foreach (var kx in new[] { 0.0, w })
+            foreach (var ky in new[] { 0.0, h })
+                far = Math.Max(far, Math.Sqrt((cx - kx) * (cx - kx) + ky * ky));
+
+        var r = (float)(far * reach);
+        var b = _spotBrush![i];
+        b.EllipseCenter = new Vector2((float)cx, 0);
+        b.EllipseRadius = new Vector2(r, r);
+
+        // Fade to the same colour with no alpha (not to black), as WashFade does.
+        var s = b.ColorStops;
+        s[0].Color = c;
+        s[0].Offset = 0;
+        s[1].Color = c;
+        s[1].Offset = (float)(solid / reach);
+        s[2].Color = Windows.UI.Color.FromArgb(0, c.R, c.G, c.B);
+        s[2].Offset = 1;
+
+        _spot![i].Size = new Vector2((float)w, (float)h);
     }
 }

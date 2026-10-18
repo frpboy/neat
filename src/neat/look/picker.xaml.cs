@@ -113,7 +113,6 @@ public sealed partial class Picker : UserControl
 
         _sync = true;
         darksw.IsOn = t.Dark;
-        spread.Value = t.Spread;
         opacity.Value = t.Opacity;
         _sync = false;
     }
@@ -128,12 +127,6 @@ public sealed partial class Picker : UserControl
     {
         if (Touched)
             App.Look.Set(t => t.Dark = darksw.IsOn);
-    }
-
-    private void spread_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (Touched && Math.Abs(spread.Value - App.Look.Cur.Spread) > 0.0005)
-            App.Look.Set(t => t.Spread = spread.Value);
     }
 
     private void opacity_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)

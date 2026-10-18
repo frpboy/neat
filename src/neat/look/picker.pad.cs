@@ -96,9 +96,6 @@ public sealed partial class Picker
         minus.IsEnabled = count > 1;
         harm.IsEnabled = Harmonies.Next(App.Look.Cur.Harmony) != App.Look.Cur.Harmony;
         harm.Content = Harmonies.Label(App.Look.Cur.Harmony);
-
-        // The gradient slider only means something with one dot; with more, the dots make the gradient.
-        spread.Visibility = count == 1 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void AddDot()

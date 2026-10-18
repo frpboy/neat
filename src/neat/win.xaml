@@ -14,9 +14,11 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Wash: the window gradient drawn as several layers that fade to clear, as Zen does,
-             so the system blur shows through between them. It is under everything else,
-             grain included. The layers are added in look/win.wash.cs. -->
+        <!-- Glow and wash: the window gradient drawn as several layers that fade to clear, as Zen
+             does, so the system blur shows through between them. They are under everything else,
+             grain included. Glow holds the two round layers (three dots only) and wash the
+             straight ones, above it. Both are filled in look/win.wash.cs. -->
+        <Grid x:Name="glow" Grid.RowSpan="2" IsHitTestVisible="False" Visibility="Collapsed"/>
         <Grid x:Name="wash" Grid.RowSpan="2" IsHitTestVisible="False" Visibility="Collapsed"/>
 
         <!-- Grain: fine noise laid over the window colour, under everything else, so it
