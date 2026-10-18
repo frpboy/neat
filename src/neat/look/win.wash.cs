@@ -154,7 +154,7 @@ public sealed partial class Win
     /// alpha at the end. Fading to the same colour (not to black) keeps the fade from going grey, the way a
     /// CSS gradient fades to "transparent".
     /// </summary>
-    private static void WashFade(GradientStopCollection s, Windows.UI.Color c, double solid)
+    private static void WashFade(System.Collections.Generic.IList<GradientStop> s, Windows.UI.Color c, double solid)
     {
         if (s.Count != 3)
         {
