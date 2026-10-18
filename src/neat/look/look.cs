@@ -180,6 +180,16 @@ public sealed class Look
         return new[] { paint(a), paint(b), paint(c) };
     }
 
+    /// <summary>
+    /// The colour of every dot as it shows over the system blur (translucent, see
+    /// <see cref="Glass"/>), first dot first. Zen's layered gradient is drawn from
+    /// these, one layer per dot (see look/win.wash.cs).
+    /// </summary>
+    public Windows.UI.Color[] Layers()
+    {
+        return Spots().Select(s => Glass(Wheel.Rgb(s.Angle, s.Radius))).ToArray();
+    }
+
     /// <summary>The colour of every dot as the pad shows it (not yet mixed into the base), first dot first.</summary>
     public Windows.UI.Color[] PadColors()
     {

@@ -48,6 +48,8 @@ src/neat/
   look/look.cs      window colour: turns the saved tint into the window gradient
   look/win.paint.cs colour menu: dark/light, gradient and opacity sliders, swatches
   look/win.pad.cs   colour pad: drag or click the big dot, add/remove dots, change harmony
+  look/backdrop.cs  the blur behind the window: Windows Acrylic (or Mica), as in Zen
+  look/win.wash.cs  the window gradient as layers that fade to clear (Zen's shape), over the blur
   look/win.grain.cs texture: the layer of fine noise over the window colour, and its dial
   look/wheel.cs     colour pad maths: angle and distance from the centre to a colour (as in Zen)
   look/harmony.cs   how up to three dots relate (complementary, triadic, ...), as in Zen

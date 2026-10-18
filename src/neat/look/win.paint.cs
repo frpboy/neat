@@ -30,6 +30,7 @@ public sealed partial class Win
             Leave();
         };
 
+        WashInit();
         GrainInit();
 
         App.Look.Changed += Paint;
@@ -47,10 +48,16 @@ public sealed partial class Win
         // The window brush is shared, so changing its stops repaints everything that uses it.
         if (root.Background is LinearGradientBrush g && g.GradientStops.Count == 3)
         {
+            // Layered (two or three dots over the blur): the wash layers draw the gradient
+            // instead (look/win.wash.cs), so this brush is left clear. It stays in place
+            // because the floating sidebar reads its direction and offsets (win.side.cs).
             var c = App.Look.Stops();
+            var none = Windows.UI.Color.FromArgb(0, 0, 0, 0);
             for (var i = 0; i < 3; i++)
-                g.GradientStops[i].Color = c[i];
+                g.GradientStops[i].Color = Layered ? none : c[i];
         }
+
+        WashPaint();
 
         // The floating sidebar copies those colours, so it has to follow.
         if (!_dock)
