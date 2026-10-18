@@ -67,14 +67,13 @@ public sealed partial class LibView : UserControl
 
     /// <summary>
     /// The sections, in the order of <see cref="Sec"/>, which is the order of the rail.
-    /// Media is a placeholder until it is built; to add a section, write its LibPage and
-    /// put it here instead of the SoonPage.
+    /// To add a section, write its LibPage and put it here.
     /// </summary>
     private static LibPage[] Pages()
     {
         return new LibPage[]
         {
-            new SoonPage("Media", "\uE8B9"),
+            new MediaPage(),
             new DlPage(),
             new MarkPage(),
             new HistPage(),
