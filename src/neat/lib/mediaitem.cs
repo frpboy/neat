@@ -59,8 +59,19 @@ public sealed class MediaItem : INotifyPropertyChanged
     /// <summary>The icon that stands in until there is a thumbnail, or for good when there cannot be one.</summary>
     public string Glyph { get; }
 
-    /// <summary>The thumbnail as a brush, so it is drawn inside the rounded corners of the tile. Null until there is one.</summary>
+    /// <summary>
+    /// The thumbnail as a brush, so it is drawn inside the rounded corners of its border. Null until
+    /// there is one. The border is ThumbW by ThumbH, the picture's own shape, so nothing is cropped.
+    /// </summary>
     public Brush? Fill => _fill;
+
+    /// <summary>Size of the picture inside its cell: as large as fits, with the shape it has. 0 until there is a thumbnail.</summary>
+    public double ThumbW { get; private set; }
+
+    public double ThumbH { get; private set; }
+
+    /// <summary>The picture shows only once there is one; until then (or for good, if there cannot be one) the glyph does.</summary>
+    public Visibility ThumbVis => _fill is null ? Visibility.Collapsed : Visibility.Visible;
 
     public Visibility GlyphVis => _fill is null ? Visibility.Visible : Visibility.Collapsed;
 
@@ -70,20 +81,46 @@ public sealed class MediaItem : INotifyPropertyChanged
     /// <summary>A tile is showing this item right now. Used by <see cref="Thumbs"/> only: work for a tile that has been recycled is skipped.</summary>
     internal bool Live { get; set; }
 
-    /// <summary>Gives the tile its thumbnail. UI thread only.</summary>
-    internal void Show(ImageSource img)
+    // The size of a cell of the grid (medialist.xaml: the tile is 140 by 120). A picture is fitted into it.
+    private const double CellW = 140;
+    private const double CellH = 120;
+
+    /// <summary>Gives the tile its thumbnail, at the picture's own shape. UI thread only.</summary>
+    internal void Show(BitmapImage img)
     {
-        _fill = new ImageBrush { ImageSource = img, Stretch = Stretch.UniformToFill };
-        Raise(nameof(Fill));
-        Raise(nameof(GlyphVis));
+        double w = img.PixelWidth;
+        double h = img.PixelHeight;
+
+        // A picture with no size cannot be drawn; the glyph stays.
+        if (w <= 0 || h <= 0)
+            return;
+
+        // As large as fits in the cell without changing the shape: a wide picture fills the width,
+        // a tall one the height, as Zen shows them. Nothing is cropped to a square.
+        var k = Math.Min(CellW / w, CellH / h);
+        ThumbW = Math.Round(w * k);
+        ThumbH = Math.Round(h * k);
+
+        _fill = new ImageBrush { ImageSource = img, Stretch = Stretch.Fill };
+        RaiseThumb();
     }
 
     /// <summary>The thumbnail was pushed out of the memory cache: back to the glyph, and ask again if the tile is shown again.</summary>
     internal void Drop()
     {
         _fill = null;
+        ThumbW = 0;
+        ThumbH = 0;
         Asked = false;
+        RaiseThumb();
+    }
+
+    private void RaiseThumb()
+    {
         Raise(nameof(Fill));
+        Raise(nameof(ThumbW));
+        Raise(nameof(ThumbH));
+        Raise(nameof(ThumbVis));
         Raise(nameof(GlyphVis));
     }
 
@@ -129,7 +166,7 @@ internal static class Thumbs
 
     private sealed class Hit
     {
-        public Hit(string full, DateTime at, ImageSource img, MediaItem owner)
+        public Hit(string full, DateTime at, BitmapImage img, MediaItem owner)
         {
             Full = full;
             At = at;
@@ -141,7 +178,7 @@ internal static class Thumbs
 
         public DateTime At { get; }
 
-        public ImageSource Img { get; }
+        public BitmapImage Img { get; }
 
         // The item showing this picture. When the picture is pushed out, the item goes back to its glyph.
         public MediaItem Owner { get; set; }
@@ -213,7 +250,7 @@ internal static class Thumbs
     }
 
     /// <summary>Asks Windows for the thumbnail. Null when the file has none (Windows then offers a generic icon, which is not wanted).</summary>
-    private static async Task<ImageSource?> Make(string full)
+    private static async Task<BitmapImage?> Make(string full)
     {
         try
         {
@@ -239,7 +276,7 @@ internal static class Thumbs
         }
     }
 
-    private static void Remember(MediaItem it, ImageSource img)
+    private static void Remember(MediaItem it, BitmapImage img)
     {
         if (Map.TryGetValue(it.Full, out var old))
         {

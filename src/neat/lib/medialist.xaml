@@ -17,41 +17,37 @@
         <SolidColorBrush x:Key="libdim"/>
         <SolidColorBrush x:Key="tilewash"/>
 
-        <!-- One file: a faint rounded tile, its glyph until the thumbnail comes (a cloud-only file
-             keeps the glyph), the thumbnail drawn as a brush so it follows the rounded corners, and
-             the file name on a dark strip at the bottom. -->
+        <!-- One file, as in Zen: just the picture, in the shape it has (not cropped to a square), with
+             rounded corners and no name. It sits in a cell of 140 by 120 (MediaItem.CellW and CellH
+             must match) and is as large as fits, so wide and tall pictures sit side by side in the
+             same row. The picture is a brush on a border of its own size, so the corners are rounded.
+             Until it comes (a cloud-only file, or a kind with no thumbnail, never gets one) a faint
+             tile with a glyph stands in. The name only shows as a tooltip. -->
         <DataTemplate x:Key="tile" x:DataType="n:MediaItem">
             <Grid
-                Width="120"
+                Width="140"
                 Height="120"
                 Background="Transparent"
                 RightTapped="tile_Menu"
                 ToolTipService.ToolTip="{x:Bind Name}">
-                <Border CornerRadius="10" Background="{StaticResource tilewash}"/>
-
-                <FontIcon
-                    Glyph="{x:Bind Glyph}"
-                    FontSize="32"
-                    Foreground="{StaticResource libdim}"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Margin="0,0,0,16"
-                    Visibility="{x:Bind GlyphVis, Mode=OneWay}"/>
-
-                <Border CornerRadius="10" Background="{x:Bind Fill, Mode=OneWay}"/>
+                <Grid Visibility="{x:Bind GlyphVis, Mode=OneWay}">
+                    <Border CornerRadius="10" Background="{StaticResource tilewash}"/>
+                    <FontIcon
+                        Glyph="{x:Bind Glyph}"
+                        FontSize="32"
+                        Foreground="{StaticResource libdim}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"/>
+                </Grid>
 
                 <Border
-                    VerticalAlignment="Bottom"
-                    CornerRadius="0,0,10,10"
-                    Background="#99000000"
-                    Padding="8,4">
-                    <TextBlock
-                        Text="{x:Bind Name}"
-                        FontSize="11"
-                        Foreground="White"
-                        MaxLines="1"
-                        TextTrimming="CharacterEllipsis"/>
-                </Border>
+                    Width="{x:Bind ThumbW, Mode=OneWay}"
+                    Height="{x:Bind ThumbH, Mode=OneWay}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    CornerRadius="10"
+                    Background="{x:Bind Fill, Mode=OneWay}"
+                    Visibility="{x:Bind ThumbVis, Mode=OneWay}"/>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
