@@ -55,7 +55,17 @@ Repo: github.com/neatbrowser/neat (WinUI 3 browser "NEAT Browser", src/neat). Th
 ### 4. Build break from a missing using in lib/librow.cs: FIXED (PR #5)
 - `LibSel : DataTemplateSelector` needs `using Microsoft.UI.Xaml.Controls;`. The XAML errors in the same log (WMC0909, WMC0001, WMC1111, WMC9999) were follow-ons: the XAML pass cannot resolve `LibRow`, `LibHead` and `LibSel` while the C# does not compile. Read the first CSxxxx error of a Build log before the WMC ones.
 
-### 5. Hypotheses that were disproved
+### 5. Blocking WinRT call inside a layout callback (Media thumbnails): FIX WRITTEN, not yet verified at runtime
+- Dump `neat.exe.2164` (18 Oct, v0.14.0.0, Microsoft.UI.Xaml 3.2.3.0 = Windows App SDK 2.5.1): fail-fast 0xc000027b, stowed HRESULT `0x8000ffff` (E_UNEXPECTED), bucket `CXcpDispatcher::OnReentrancyProtectedWindowMessage`, xcpwindow.cpp line 669.
+- Native `kn`: a DispatcherQueueTimer delivered a queued XAML message while the UI thread sat in a COM modal loop (`CCliModalLoop::BlockFn` / `PeekMessageW`) inside `windows_storage!CStorageFileStaticsInProc::GetFileFromPathAsync` (a cross-apartment call for a brokered identity). Managed `!clrstack` (after `.loadby sos coreclr`) named the caller: `MediaList.list_Row` (medialist.xaml.cs:105, a ContainerContentChanging handler) -> `Thumbs.Fill` (mediaitem.cs:234) -> `Thumbs.Make` (mediaitem.cs:257).
+- Why it dies: XAML's `OnReentrancyProtectedWindowMessage` (source read at the symbol's commit) holds a reentrancy guard; a second message processed while the first is still running is "Reentrancy detected. Report and fail-fast." Code that XAML calls out to (layout, parser, ContainerContentChanging) must not pump messages. A synchronous WinRT/COM call on the STA UI thread does.
+- `Thumbs.Fill` is fire-and-forget (`_ = Thumbs.Fill(it)`) but runs synchronously until its first real suspension, so its first Windows call happened inside the layout pass. The old class comment said the WinRT calls "do their work elsewhere"; that was wrong for the part that waits on another apartment.
+- Fix: `Make()` opens the file and asks for the thumbnail inside `Task.Run`; the `BitmapImage` is still built on the UI thread. Not changed: `libmedia.cs` (~line 485) and `data/downloads.cs` (~line 234) also call `GetFileFromPathAsync`, but from click handlers, not from layout.
+- Rule from this: nothing that XAML calls during layout or measure (ContainerContentChanging, Loaded, SizeChanged, LayoutUpdated, template code) may do a blocking WinRT/COM call, synchronous file or SQLite work, or anything that can pump messages. Hand it to a pool thread or defer with `DispatcherQueue.TryEnqueue`, as `MediaList.More()` already does.
+- crash.log has NO `[xaml]` line for this kind of crash: it fail-fasts in XAML's own dispatcher and never reaches `Application.UnhandledException`. Look at the last lines before the end of the session instead.
+- To verify: open the Library Media section on a big folder and scroll quickly, with other apps running. No crash and no `[stall]` lines.
+
+### 6. Hypotheses that were disproved
 - "Many tabs cause the freeze": the logs showed no correlation.
 - "WebView2 crashes": `ProcessFailed` logging showed none before the crashes; the faulting module is Microsoft.UI.Xaml.dll, not WebView2.
 - Most 0xc000027b events were the exit bug (finding 1), not mid-session crashes.
@@ -71,6 +81,7 @@ Repo: github.com/neatbrowser/neat (WinUI 3 browser "NEAT Browser", src/neat). Th
 - Ask for crash.log FIRST. `App.xaml.cs` logs every unhandled XAML exception as a `[xaml]` line with type, message and a managed stack before the app dies. Of 42 such lines (8 to 16 Oct) 41 were the old `Holes()` exit bug and one was `reload_Click`; those lines named the culprit where the dump could not.
 - To find real crashes in a crash.log: list the sessions (lines with `[app] ... start,`), mark those with no `window closed normally`, then look for a `[xaml]` line inside each. A session with no clean exit and no `[xaml]` line did not die through the XAML path and needs another explanation.
 - Dumps come from WER LocalDumps into `C:\CrashDumps`. In WinDbg: `.ecxr`, `kn`, `!analyze -v`. Ask the user to paste text output rather than screenshots when possible.
+- For managed frames in WinDbg: `.loadby sos coreclr`, then `!clrstack` on thread 0. The native `kn` cannot walk managed frames and shows garbage there; `!clrstack` gave the exact C# call chain and line numbers in finding 5. Then `!analyze -v` for the HRESULT. Two commands answered what the native stack alone could not.
 - A `kn` of a stowed-exception fail-fast (frames `FailFastWithStowedExceptions`, `ReportUnhandledError`) shows only where the error was reported, not where it was thrown. The HRESULT, exception type and managed stack are in the stowed exception record (`!analyze -v`) or in crash.log.
 - Match the dump to the build: Microsoft.UI.Xaml.dll was 3.1.8.0 with Windows App SDK 1.8. After the 2.x upgrade the version differs, so symbols and offsets from the old dumps no longer apply.
 - Check that the user is running the build you think. One earlier "new crash" came from an old download; the user later confirmed and updated.
@@ -78,12 +89,14 @@ Repo: github.com/neatbrowser/neat (WinUI 3 browser "NEAT Browser", src/neat). Th
 
 ## Open items (nothing here is done unless the git log says so)
 
-- Two sessions ended with no "window closed normally" and no `[xaml]` line, so they are unexplained: 15 Oct (started 11:42, last line 13:02) and 16 Oct (started 15:16, last line 23:42:21). The second ended right after the WebView2 GPU process crashed (`GpuProcessExited`, reason Crashed, exit code 34, logged once per tab, 9 tabs). At 21:31 the machine was at 7377 of 8107 MB RAM with 19 msedgewebview2 processes. Out-of-memory is only a guess. Needs the WER dump or Event Viewer entry for 23:42.
+- 16 Oct session (started 15:16, last line 23:42:21): explained by the user. The machine has only 8 GB RAM and was running Arc, DuckDuckGo, Comet, Zalo and OnlyOffice at once; every app lagged, NEAT hung, WebView2's GPU process crashed (`GpuProcessExited`, exit code 34, one line per tab) and the user force-closed it while trying to close the other apps. Not a NEAT bug. Do not infer code faults from lag on this machine when many apps are open.
+- 15 Oct session (started 11:42, last line 13:02) ended with no clean exit and no `[xaml]` line; cause unknown, not asked about yet. It predates finding 5, which leaves no `[xaml]` line either, so it may be that kind of crash.
+- Other blocking calls on the UI thread: click handlers in `libmedia.cs` and `data/downloads.cs` call `StorageFile.GetFileFromPathAsync` directly. Not in layout, so lower risk, but they also block until the apartment answers. `LibHist` calls `Next()` from `liblist`'s `ContainerContentChanging` handler; not checked for work done synchronously inside layout.
 - No catch-all around handlers exists yet. Only the Reload path was hardened (finding 3). Option, not approved: a small guard around every handler so a failed one is logged instead of ending the app.
 - UI stalls of 2 to 8 s at startup or idle (`[stall]` lines), cause unknown; some coincide with `history.add` on the UI thread (up to 3751 ms earlier, 100 to 270 ms lately).
 - Move SQLite off the UI thread and enable WAL; drop the per-page `Stats()` queries.
 - Fix the diagnostics flaws above.
-- Hover fix (finding 2) and the reload fix (finding 3) still need runtime confirmation from the user.
+- Hover fix (finding 2), reload fix (finding 3) and thumbnail fix (finding 5) still need runtime confirmation from the user.
 - WebView2 runtime version should be re-checked against NuGet when touching the csproj.
 - Delete the obsolete exit dumps in C:\CrashDumps (keep neat.exe.1884.dmp as the reference for finding 2).
 
@@ -98,3 +111,4 @@ Repo: github.com/neatbrowser/neat (WinUI 3 browser "NEAT Browser", src/neat). Th
 7. Evidence beats reasoning about framework internals. In the reload case a plausible argument said a Click handler would not appear on that stack; the log showed it did. Do not rule a suspect out from how you think XAML dispatches events.
 8. Ask for crash.log before asking for dump output, and say which lines to send. It is cheaper for the user and usually decisive.
 9. After any push, if the stop hook still complains, check `git branch -r --contains HEAD`: the commit is often already merged into `origin/main`. The hook appears to inspect the clone in `/home/claude/neat` (the shell cwd resets there); keeping that clone on an up-to-date `main` silenced it.
+10. Check where a fire-and-forget `async` method starts: `_ = Foo()` runs `Foo` synchronously up to its first real suspension, on the caller's thread, inside whatever callback made the call. Comments that say a call "works elsewhere" are claims to verify, not facts.
