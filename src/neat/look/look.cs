@@ -185,6 +185,22 @@ public sealed class Look
         return Spots().Select(s => Make(Wheel.Rgb(s.Angle, s.Radius))).ToArray();
     }
 
+    /// <summary>How much of the first dot's colour the command bar's pick keeps; the rest is the panel it sits on.</summary>
+    private const double HighlightShare = 0.6;
+
+    /// <summary>
+    /// The colour of the pick in the command bar's list: the first dot of the pad (the main
+    /// colour), mixed into <paramref name="panel"/>, the colour the list sits on, but not so far
+    /// that the text (<paramref name="ink"/>) falls below <see cref="MinContrast"/>.
+    /// </summary>
+    public Windows.UI.Color Highlight((byte R, byte G, byte B) panel, (byte R, byte G, byte B) ink)
+    {
+        var spot = Spots()[0];
+        var pad = Wheel.Rgb(spot.Angle, spot.Radius);
+
+        return Make(Contrast.Legible(pad, panel, HighlightShare, ink, MinContrast));
+    }
+
     /// <summary>A mid-strength colour for a ready-made hue, for the swatches.</summary>
     public static Windows.UI.Color Swatch(double hue)
     {

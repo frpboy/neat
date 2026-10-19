@@ -39,10 +39,11 @@ Folder and file names are lowercase, in the style of large browser codebases.
 src/neat/
   neat.csproj       project (unpackaged, self-contained, x64)
   app.xaml(.cs)     application entry, look constants, shared services
-  win.xaml(.cs)     main window: tabs, navigation, bookmarks, command bar
+  win.xaml(.cs)     main window: tabs, navigation, bookmarks
   win.side.cs       sidebar states (docked, hidden, peeking) and tab row look
   win.bar.cs        title bar: click-through regions, address chip, copy link
   win.keys.cs       shortcut table and the script that reports keys pressed inside pages
+  win.cmd.cs        command bar: the box and its list of suggestions, arrow keys
   web/env.cs        app folders; points WebView2 at the bundled runtime
   web/tab.cs        one tab: its web view, title, address and favicon
   look/look.cs      window colour: turns the saved tint into the window gradient
@@ -58,6 +59,7 @@ src/neat/
   data/prefs.cs     what settings.json holds (home page, search engines, window size)
   data/store.cs     loads and saves settings.json
   data/search.cs    turns typed text into an address or a search
+  data/suggest.cs   the rows of the command bar: open tabs, bookmarks, history, typed text
   data/db.cs        connections to browser.db
   data/history.cs   history table
   data/marks.cs     bookmarks table (flat list, no folders yet)

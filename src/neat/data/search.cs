@@ -49,6 +49,13 @@ public sealed class Search
         return Build(Use, s);
     }
 
+    /// <summary>True when <see cref="Resolve"/> would open the text as an address, false when it would search for it.</summary>
+    public bool IsAddress(string? text)
+    {
+        var s = text?.Trim();
+        return !string.IsNullOrEmpty(s) && Looks(s);
+    }
+
     private static string Build(Engine e, string q)
     {
         return e.Url.Replace("%s", WebUtility.UrlEncode(q));

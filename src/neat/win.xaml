@@ -417,17 +417,80 @@
                 Background="#F2141414"
                 BorderBrush="#33FFFFFF"
                 BorderThickness="1"
+                RequestedTheme="Dark"
                 Tapped="panel_Tapped">
                 <StackPanel Spacing="4">
                     <!-- Second typing test. -->
                     <TextBox
                         x:Name="q"
                         PlaceholderText="Search or Enter URL..."
-                        KeyDown="q_KeyDown"/>
-                    <TextBlock Text="Wikipedia  -  wikipedia.org" Padding="10,8"/>
-                    <TextBlock Text="YouTube  -  youtube.com" Padding="10,8"/>
-                    <TextBlock Text="Reddit  -  reddit.com" Padding="10,8"/>
-                    <TextBlock Text="Add-ons for Firefox  -  addons.mozilla.org" Padding="10,8"/>
+                        KeyDown="q_KeyDown"
+                        TextChanged="q_TextChanged"/>
+
+                    <!-- The suggestions (win.cmd.cs). The pick is moved from code with the arrow
+                         keys while the cursor stays in the box above. Same selection setup as
+                         the tab list: the selection indicator is switched off for real, not just
+                         painted transparent (see the comment on that list). The three "Selected"
+                         colours below are only a start: win.cmd.cs sets them from the window's
+                         main colour each time the bar opens. The panel is always dark, so it is
+                         always drawn with the dark theme (RequestedTheme above). -->
+                    <ListView
+                        x:Name="hints"
+                        Visibility="Collapsed"
+                        MaxHeight="400"
+                        SelectionMode="Single"
+                        IsItemClickEnabled="True"
+                        ItemClick="hints_ItemClick">
+                        <ListView.Resources>
+                            <x:Boolean x:Key="ListViewItemSelectionIndicatorVisualEnabled">False</x:Boolean>
+                            <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#1AFFFFFF"/>
+                            <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="#26FFFFFF"/>
+                            <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#33FFFFFF"/>
+                            <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#40FFFFFF"/>
+                            <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="#33FFFFFF"/>
+                            <SolidColorBrush x:Key="ListViewItemSelectionIndicatorBrush" Color="Transparent"/>
+                            <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPointerOverBrush" Color="Transparent"/>
+                            <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPressedBrush" Color="Transparent"/>
+                        </ListView.Resources>
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="n:Hint">
+                                <Grid
+                                    Height="40"
+                                    ColumnSpacing="12"
+                                    Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="18"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Image
+                                        Width="16"
+                                        Height="16"
+                                        Source="{x:Bind Icon, Mode=OneWay}"
+                                        Visibility="{x:Bind IconVis, Mode=OneWay}"/>
+                                    <FontIcon
+                                        Glyph="{x:Bind Glyph}"
+                                        FontSize="14"
+                                        Visibility="{x:Bind GlyphVis, Mode=OneWay}"/>
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis">
+                                        <Run Text="{x:Bind Title}"/><Run Text="{x:Bind Sub}" Foreground="#99FFFFFF"/>
+                                    </TextBlock>
+
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="#99FFFFFF"
+                                        Text="{x:Bind Tag}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
                 </StackPanel>
             </Border>
         </Grid>

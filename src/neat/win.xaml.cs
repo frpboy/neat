@@ -14,7 +14,6 @@ public sealed partial class Win : Window
 {
     private readonly ObservableCollection<Tab> _tabs = new();
     private Tab? _cur;
-    private bool _edit;   // command bar mode: false = open in a new tab, true = edit this tab's address
     private string _ver = string.Empty;
 
     public Win()
@@ -383,82 +382,6 @@ public sealed partial class Win : Window
         catch (Exception ex)
         {
             info.Text = _ver + "\ndata error: " + ex.Message;
-        }
-    }
-
-    // ---- command bar overlay ----
-
-    /// <summary>
-    /// Opens the command bar. Two modes: new tab (empty box, Enter opens the
-    /// result in a new tab) or edit (the selected tab's address filled in and
-    /// selected, Enter navigates that tab).
-    /// </summary>
-    private void ShowBar(bool edit)
-    {
-        _edit = edit;
-        q.Text = edit ? (_cur?.Src ?? string.Empty) : string.Empty;
-        scrim.Visibility = Visibility.Visible;
-
-        // The box only accepts focus once it is laid out.
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            q.Focus(FocusState.Programmatic);
-
-            if (edit)
-                q.SelectAll();
-        });
-    }
-
-    private void HideBar()
-    {
-        scrim.Visibility = Visibility.Collapsed;
-    }
-
-    private void newtab_Click(object sender, RoutedEventArgs e)
-    {
-        ShowBar(false);
-    }
-
-    private void scrim_Tapped(object sender, TappedRoutedEventArgs e)
-    {
-        HideBar();
-    }
-
-    private void panel_Tapped(object sender, TappedRoutedEventArgs e)
-    {
-        // Keep taps on the panel from reaching the scrim and closing it.
-        e.Handled = true;
-    }
-
-    private void q_KeyDown(object sender, KeyRoutedEventArgs e)
-    {
-        if (e.Key == VirtualKey.Escape)
-        {
-            HideBar();
-        }
-        else if (e.Key == VirtualKey.Enter)
-        {
-            var url = App.Find.Resolve(q.Text);
-            var edit = _edit;
-            var tab = _cur;
-            HideBar();
-
-            if (url is null)
-                return;
-
-            // Edit mode goes to the page of the selected tab, new-tab mode
-            // opens a tab. A tab whose web view has not started yet cannot be
-            // navigated, so it falls back to a new tab.
-            var core = tab?.View.CoreWebView2;
-            if (edit && tab is not null && core is not null)
-            {
-                core.Navigate(url);
-                tab.View.Focus(FocusState.Programmatic);
-            }
-            else
-            {
-                _ = Open(url);
-            }
         }
     }
 }
