@@ -221,6 +221,16 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
+                    <!-- The window's layers on the floating panel, under everything else in it (the grain
+                         below goes over them). Over the blur the window is drawn as layers, and an opaque
+                         panel has to carry the same ones; look/win.sidewash.cs fills this in, pulls it out
+                         over the panel's padding and hides it while the sidebar is docked. -->
+                    <Border
+                        x:Name="sidewash"
+                        Grid.RowSpan="3"
+                        IsHitTestVisible="False"
+                        Visibility="Collapsed"/>
+
                     <!-- Grain for the floating panel, under everything else in it. A solid panel hides the
                          window's grain, so it carries its own; win.grain.cs (SideGrain) fills it in, pulls
                          it out over the panel's padding and hides it while the sidebar is docked. -->

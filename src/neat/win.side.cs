@@ -57,7 +57,7 @@ public sealed partial class Win
         root.SizeChanged += (s, e) =>
         {
             if (!_dock)
-                side.Background = PeekBrush();
+                SidePaint();
         };
 
         // Animations are switched on only after the first Layout(), so the
@@ -155,7 +155,7 @@ public sealed partial class Win
             side.Margin = new Thickness(6 - Bite, -Bite, 0, 6 - Bite);
             side.Padding = new Thickness(10 + Bite, 16 + Bite, 10, 10 + Bite);
             side.CornerRadius = new CornerRadius(_rs);
-            side.Background = PeekBrush();
+            SidePaint();
             side.BorderBrush = _edge;
         }
 
@@ -164,6 +164,9 @@ public sealed partial class Win
 
         // A floating panel hides the window's grain, so it carries its own (see win.grain.cs).
         SideGrain();
+
+        // Over the blur it also carries the window's layers (look/win.sidewash.cs).
+        SideWash();
 
         // The Library's panel, and the page being pushed aside for it (win.lib.cs).
         LibLayout();

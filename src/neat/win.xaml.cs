@@ -37,6 +37,7 @@ public sealed partial class Win : Window
         SideInit();
         KeysInit();
         PaintInit();
+        RoundInit();
         LibInit();
 
         // The first tab opens once the window is up.

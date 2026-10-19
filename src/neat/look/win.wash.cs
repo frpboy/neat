@@ -106,6 +106,10 @@ public sealed partial class Win
                 WashSpot(1, c[1], w, h, 0.95, 0.75, 0.00);
                 glow.Visibility = Visibility.Visible;
             }
+
+            // The floating sidebar shows copies of these layers (look/win.sidewash.cs). Here, and
+            // not in a handler of its own, so it always runs after they have been brought up to date.
+            SideWash();
         }
         catch (Exception ex)
         {

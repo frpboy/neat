@@ -59,9 +59,12 @@ public sealed partial class Win
 
         WashPaint();
 
-        // The floating sidebar copies those colours, so it has to follow.
+        // The floating sidebar copies those colours, so it has to follow. Its layers copy the
+        // ones WashPaint has just set, so this comes after it.
         if (!_dock)
-            side.Background = PeekBrush();
+            SidePaint();
+
+        SideWash();
 
         GrainPaint();
     }
