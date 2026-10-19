@@ -149,9 +149,13 @@ public sealed class MediaItem : INotifyPropertyChanged
 /// Thumbnails for the Media section. A tile asks for its picture when it is first shown, so
 /// a folder of thousands of files costs nothing for the tiles that are never scrolled to.
 ///
-/// Everything here runs on the UI thread: the requests to Windows are WinRT calls that do their
-/// work elsewhere, and the code after each await comes back here. A few requests run at a time,
-/// and a request whose tile has been recycled by scrolling is dropped before it is sent.
+/// Fill is called from the tile callback of the list, which runs inside a layout pass, and it
+/// starts running right there. The calls to Windows (opening the file, making the picture) are
+/// therefore made on a pool thread, see Make: a WinRT call such as StorageFile.GetFileFromPathAsync
+/// can wait for another apartment, and a wait on the UI thread keeps handling window messages,
+/// which XAML does not allow inside a layout pass (it ends the app). The rest, the bookkeeping and
+/// building the BitmapImage, runs on the UI thread. A few requests run at a time, and a request
+/// whose tile has been recycled by scrolling is dropped before it is sent.
 /// </summary>
 internal static class Thumbs
 {
@@ -254,12 +258,21 @@ internal static class Thumbs
     {
         try
         {
-            var file = await Windows.Storage.StorageFile.GetFileFromPathAsync(full);
+            // Windows is asked from a pool thread, not from here. GetFileFromPathAsync makes a
+            // call into another apartment and waits for it; on the UI thread that wait handles
+            // window messages, and when this runs inside the list's layout pass XAML finds a
+            // second message being processed and ends the app (crash of 18 Oct: 0x8000ffff in
+            // CXcpDispatcher::OnReentrancyProtectedWindowMessage). The picture itself is made
+            // below, back on the UI thread, because a BitmapImage belongs to it.
+            using var th = await Task.Run(async () =>
+            {
+                var file = await Windows.Storage.StorageFile.GetFileFromPathAsync(full);
 
-            using var th = await file.GetThumbnailAsync(
-                Windows.Storage.FileProperties.ThumbnailMode.SingleItem,
-                Size,
-                Windows.Storage.FileProperties.ThumbnailOptions.None);
+                return await file.GetThumbnailAsync(
+                    Windows.Storage.FileProperties.ThumbnailMode.SingleItem,
+                    Size,
+                    Windows.Storage.FileProperties.ThumbnailOptions.None);
+            });
 
             if (th is null || th.Type != Windows.Storage.FileProperties.ThumbnailType.Image)
                 return null;
