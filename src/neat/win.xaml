@@ -411,139 +411,148 @@
                  see-through fill and a see-through border laid over each other the edge came out
                  uneven on the curves. The curve is also bigger now, and the box inside it has no
                  frame of its own, so there is a single outline instead of one inside another. -->
-            <Border
+            <!-- Where the panel sits. This slot is as tall as the panel is at its fullest: 16 (padding)
+                 + 2 (frame) + 52 (box) + 9 (line) + 5 rows of 54, and it is centred in the window.
+                 The panel hangs from the top of the slot, so the box stays put and the list grows
+                 downward under it, as in Arc and Zen. If a row's height changes, change the 349
+                 and the list's MaxHeight with it. -->
+            <Grid
                 MaxWidth="720"
+                Height="349"
+                Margin="28,0"
                 HorizontalAlignment="Stretch"
-                VerticalAlignment="Top"
-                Margin="28,110,28,0"
-                Padding="8"
-                CornerRadius="22"
-                Background="#FF121212"
-                BorderBrush="#FF2E2E2E"
-                BorderThickness="1"
-                RequestedTheme="Dark"
-                Tapped="panel_Tapped">
-                <StackPanel>
-                    <Grid Height="52">
-                        <FontIcon
-                            Glyph="&#xE721;"
-                            FontSize="18"
-                            Margin="14,0,0,0"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Center"
-                            Foreground="#B3FFFFFF"/>
+                VerticalAlignment="Center">
+                <Border
+                    VerticalAlignment="Top"
+                    Padding="8"
+                    CornerRadius="22"
+                    Background="#FF121212"
+                    BorderBrush="#FF2E2E2E"
+                    BorderThickness="1"
+                    RequestedTheme="Dark"
+                    Tapped="panel_Tapped">
+                    <StackPanel>
+                        <Grid Height="52">
+                            <FontIcon
+                                Glyph="&#xE721;"
+                                FontSize="18"
+                                Margin="14,0,0,0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Foreground="#B3FFFFFF"/>
 
-                        <!-- Second typing test. -->
-                        <!-- The box draws no background, frame or blue underline of its own. -->
-                        <TextBox
-                            x:Name="q"
-                            Margin="48,0,8,0"
-                            Padding="0,12"
-                            VerticalAlignment="Center"
-                            FontSize="18"
-                            PlaceholderText="Search or Enter URL..."
-                            KeyDown="q_KeyDown"
-                            TextChanged="q_TextChanged">
-                            <TextBox.Resources>
-                                <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
-                                <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
-                                <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
-                                <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
-                                <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
-                                <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent"/>
-                                <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent"/>
-                                <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent"/>
-                            </TextBox.Resources>
-                        </TextBox>
-                    </Grid>
+                            <!-- Second typing test. -->
+                            <!-- The box draws no background, frame or blue underline of its own. -->
+                            <TextBox
+                                x:Name="q"
+                                Margin="48,0,8,0"
+                                Padding="0,12"
+                                VerticalAlignment="Center"
+                                FontSize="18"
+                                PlaceholderText="Search or Enter URL..."
+                                KeyDown="q_KeyDown"
+                                TextChanged="q_TextChanged">
+                                <TextBox.Resources>
+                                    <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
+                                    <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                    <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
+                                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
+                                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent"/>
+                                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent"/>
+                                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent"/>
+                                </TextBox.Resources>
+                            </TextBox>
+                        </Grid>
 
-                    <!-- Thin line between the box and the list; shown together with the list (win.cmd.cs). -->
-                    <Border
-                        x:Name="rule"
-                        Height="1"
-                        Margin="6,2,6,6"
-                        Visibility="Collapsed"
-                        Background="#1FFFFFFF"/>
+                        <!-- Thin line between the box and the list; shown together with the list (win.cmd.cs). -->
+                        <Border
+                            x:Name="rule"
+                            Height="1"
+                            Margin="6,2,6,6"
+                            Visibility="Collapsed"
+                            Background="#1FFFFFFF"/>
 
-                    <!-- The suggestions (win.cmd.cs). The pick is moved from code with the arrow
-                         keys while the cursor stays in the box above. Same selection setup as
-                         the tab list: the selection indicator is switched off for real, not just
-                         painted transparent (see the comment on that list). The three "Selected"
-                         colours below are only a start: win.cmd.cs sets them from the window's
-                         main colour each time the bar opens. The panel is always dark, so it is
-                         always drawn with the dark theme (RequestedTheme above). -->
-                    <ListView
-                        x:Name="hints"
-                        Visibility="Collapsed"
-                        MaxHeight="520"
-                        SelectionMode="Single"
-                        IsItemClickEnabled="True"
-                        ItemClick="hints_ItemClick">
-                        <ListView.Resources>
-                            <x:Boolean x:Key="ListViewItemSelectionIndicatorVisualEnabled">False</x:Boolean>
-                            <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#1AFFFFFF"/>
-                            <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="#26FFFFFF"/>
-                            <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#33FFFFFF"/>
-                            <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#40FFFFFF"/>
-                            <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="#33FFFFFF"/>
-                            <SolidColorBrush x:Key="ListViewItemSelectionIndicatorBrush" Color="Transparent"/>
-                            <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPointerOverBrush" Color="Transparent"/>
-                            <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPressedBrush" Color="Transparent"/>
-                        </ListView.Resources>
+                        <!-- The suggestions (win.cmd.cs). Five rows show (MaxHeight = 5 x 54) and the rest
+                             scroll. The pick is moved from code with the arrow keys while the cursor stays in
+                             the box above. Same selection setup as the tab list: the selection indicator is
+                             switched off for real, not just painted transparent (see the comment on that list).
+                             The three "Selected" colours below are only a start: win.cmd.cs sets them from the
+                             window's main colour each time the bar opens. The panel is always dark, so it is
+                             always drawn with the dark theme (RequestedTheme above). -->
+                        <ListView
+                            x:Name="hints"
+                            Visibility="Collapsed"
+                            MaxHeight="270"
+                            SelectionMode="Single"
+                            IsItemClickEnabled="True"
+                            ItemClick="hints_ItemClick">
+                            <ListView.Resources>
+                                <x:Boolean x:Key="ListViewItemSelectionIndicatorVisualEnabled">False</x:Boolean>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#1AFFFFFF"/>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="#26FFFFFF"/>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#33FFFFFF"/>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#40FFFFFF"/>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="#33FFFFFF"/>
+                                <SolidColorBrush x:Key="ListViewItemSelectionIndicatorBrush" Color="Transparent"/>
+                                <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPointerOverBrush" Color="Transparent"/>
+                                <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPressedBrush" Color="Transparent"/>
+                            </ListView.Resources>
 
-                        <!-- Each row is a rounded block. 14 is the panel's curve (22) minus its
-                             padding (8), so the curves of the row and the panel run in parallel. -->
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
-                                <Setter Property="CornerRadius" Value="14"/>
-                                <Setter Property="Margin" Value="0,1"/>
-                                <Setter Property="Padding" Value="14,0"/>
-                                <Setter Property="MinHeight" Value="0"/>
-                            </Style>
-                        </ListView.ItemContainerStyle>
+                            <!-- Each row is a rounded block. 14 is the panel's curve (22) minus its
+                                 padding (8), so the curves of the row and the panel run in parallel. -->
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                                    <Setter Property="CornerRadius" Value="14"/>
+                                    <Setter Property="Margin" Value="0,1"/>
+                                    <Setter Property="Padding" Value="14,0"/>
+                                    <Setter Property="MinHeight" Value="0"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
 
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="n:Hint">
-                                <Grid
-                                    Height="52"
-                                    ColumnSpacing="14"
-                                    Background="Transparent">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="20"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="n:Hint">
+                                    <Grid
+                                        Height="52"
+                                        ColumnSpacing="14"
+                                        Background="Transparent">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <Image
-                                        Width="20"
-                                        Height="20"
-                                        Source="{x:Bind Icon, Mode=OneWay}"
-                                        Visibility="{x:Bind IconVis, Mode=OneWay}"/>
-                                    <FontIcon
-                                        Glyph="{x:Bind Glyph}"
-                                        FontSize="16"
-                                        Visibility="{x:Bind GlyphVis, Mode=OneWay}"/>
+                                        <Image
+                                            Width="20"
+                                            Height="20"
+                                            Source="{x:Bind Icon, Mode=OneWay}"
+                                            Visibility="{x:Bind IconVis, Mode=OneWay}"/>
+                                        <FontIcon
+                                            Glyph="{x:Bind Glyph}"
+                                            FontSize="16"
+                                            Visibility="{x:Bind GlyphVis, Mode=OneWay}"/>
 
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        FontSize="15"
-                                        TextTrimming="CharacterEllipsis">
-                                        <Run Text="{x:Bind Title}"/><Run Text="{x:Bind Sub}" Foreground="#99FFFFFF"/>
-                                    </TextBlock>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="15"
+                                            TextTrimming="CharacterEllipsis">
+                                            <Run Text="{x:Bind Title}"/><Run Text="{x:Bind Sub}" Foreground="#99FFFFFF"/>
+                                        </TextBlock>
 
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        VerticalAlignment="Center"
-                                        FontSize="13"
-                                        Foreground="#B3FFFFFF"
-                                        Text="{x:Bind Tag}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </StackPanel>
-            </Border>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            FontSize="13"
+                                            Foreground="#B3FFFFFF"
+                                            Text="{x:Bind Tag}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
