@@ -94,6 +94,9 @@ public sealed class Store
         if (string.IsNullOrWhiteSpace(Cur.Home))
             Cur.Home = new Prefs().Home;
 
+        if (!Enum.IsDefined(Cur.Start))
+            Cur.Start = StartMode.Home;
+
         Cur.Tint ??= new Tint();
         Cur.Tint.Hue = ((Cur.Tint.Hue % 360) + 360) % 360;
         Cur.Tint.Tone = Math.Clamp(Cur.Tint.Tone, 0, 1);

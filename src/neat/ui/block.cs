@@ -1,6 +1,7 @@
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace neat;
 
@@ -126,6 +127,31 @@ internal static class Block
         row.Children.Add(control);
 
         return row;
+    }
+
+    /// <summary>
+    /// One choice out of a group where only one can be on (the buttons that share a group name):
+    /// a round button with its label beside it, in a row as tall as the others. The whole row
+    /// can be clicked. Set the state before adding a handler, so building the page saves nothing.
+    /// </summary>
+    public static RadioButton Choice(Skin s, string label, string group, bool on)
+    {
+        return new RadioButton
+        {
+            Content = new TextBlock { Text = label, FontSize = 14, Foreground = s.Fg },
+            GroupName = group,
+            IsChecked = on,
+            MinWidth = 0,
+            MinHeight = 52,
+            Padding = new Thickness(8, 0, 0, 0),
+            Margin = new Thickness(16, 0, 16, 0),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            VerticalContentAlignment = VerticalAlignment.Center,
+
+            // Without a fill only the button and the text can be clicked, not the space between.
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
     }
 
     /// <summary>

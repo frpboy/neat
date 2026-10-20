@@ -50,6 +50,7 @@ public sealed partial class Win
         Accel(VirtualKey.W, C, Area.Tabs, "Close tab", () => { if (_cur is not null) Shut(_cur); });
         Accel(VirtualKey.Tab, C, Area.Tabs, "Next tab", () => Step(1));
         Accel(VirtualKey.Tab, C | S, Area.Tabs, "Previous tab", () => Step(-1));
+        Accel(VirtualKey.T, C | S, Area.Tabs, "Reopen closed tab", Reopen);
 
         // Ctrl+1..8 pick that tab, Ctrl+9 the last one.
         for (var n = 1; n <= 8; n++)
@@ -72,6 +73,7 @@ public sealed partial class Win
         Accel(VirtualKey.D, C, Area.Page, "Bookmark this page", () => _ = ToggleMark());
         Accel(VirtualKey.W, C | S, Area.Window, "Close window", Close);
         Accel(Comma, C, Area.Window, "Settings", ShowOpts);
+        Accel(VirtualKey.F11, VirtualKeyModifiers.None, Area.Window, "Full screen", ToggleFull);
 
         // The Library (win.lib.cs). Esc is not here: everything in this table is also swallowed
         // inside web pages, which would take Esc away from every site. LibView handles it.

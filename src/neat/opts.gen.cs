@@ -3,7 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace neat;
 
-/// <summary>The General page: the home page and the search engine.</summary>
+/// <summary>The General page: what opens at startup, the home page and the search engine.</summary>
 public sealed partial class Opts
 {
     // The controls of this page while it is on show; null when another page is.
@@ -43,13 +43,31 @@ public sealed partial class Opts
         };
         _box = box;
 
+        // Which of the two is on is set before the handlers are added, so building the page saves nothing.
+        var start = App.Cfg.Cur.Start;
+        var home = Block.Choice(_skin, "Open the home page", "start", start == StartMode.Home);
+        var last = Block.Choice(_skin, "Continue where you left off", "start", start == StartMode.Last);
+        home.Checked += (s, e) => SetStart(StartMode.Home);
+        last.Checked += (s, e) => SetStart(StartMode.Last);
+
         return Block.Page(
-            Block.Head(_skin, "Startup"),
+            Block.Head(_skin, "On startup"),
+            Block.Card(_skin, home, last),
+            Block.Head(_skin, "Home page"),
             Block.Card(_skin,
-                Block.Row(_skin, "Home page", "Opens in the first tab at startup, and with Alt+Home.", _home)),
+                Block.Row(_skin, "Home page", "Opens at startup when \"Open the home page\" is chosen above, and with Alt+Home.", _home)),
             Block.Head(_skin, "Search"),
             Block.Card(_skin,
                 Block.Row(_skin, "Search engine", "Used for anything typed in the address bar that is not a web address.", box)));
+    }
+
+    private static void SetStart(StartMode mode)
+    {
+        if (App.Cfg.Cur.Start == mode)
+            return;
+
+        App.Cfg.Cur.Start = mode;
+        App.Cfg.Save();
     }
 
     /// <summary>

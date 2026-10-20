@@ -8,6 +8,7 @@ public partial class App : Application
 
     // Shared by every window. Set up once in OnLaunched, before the first window opens.
     public static Store Cfg { get; private set; } = null!;
+    public static Session Sess { get; private set; } = null!;
     public static History Hist { get; private set; } = null!;
     public static Bookmarks Marks { get; private set; } = null!;
     public static Downloads Dl { get; private set; } = null!;
@@ -39,6 +40,7 @@ public partial class App : Application
     {
         Cfg = new Store(Path.Combine(Env.Root, "settings.json"));
         Cfg.Load();
+        Sess = new Session(Path.Combine(Env.Root, "session.json"));
         Find = new Search(Cfg);
         Look = new Look(Cfg);
 

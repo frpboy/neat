@@ -55,6 +55,16 @@ public sealed class Tint
     public bool Dark { get; set; } = true;
 }
 
+/// <summary>What the browser opens when it starts (Settings > General > On startup).</summary>
+public enum StartMode
+{
+    /// <summary>The home page, in one tab.</summary>
+    Home,
+
+    /// <summary>The tabs that were open when the browser was closed (see session.cs).</summary>
+    Last,
+}
+
 /// <summary>
 /// Everything saved in settings.json. A plain data object with no logic, so it
 /// round-trips cleanly through System.Text.Json. Unknown keys in the file are
@@ -64,6 +74,9 @@ public sealed class Prefs
 {
     /// <summary>Page the first tab opens on at startup.</summary>
     public string Home { get; set; } = "https://www.google.com";
+
+    /// <summary>What opens at startup: the home page, or the tabs of last time.</summary>
+    public StartMode Start { get; set; } = StartMode.Home;
 
     /// <summary>Name of the engine in use. Must match one of Engines.</summary>
     public string Use { get; set; } = "Google";

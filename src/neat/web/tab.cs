@@ -72,6 +72,12 @@ public sealed class Tab : INotifyPropertyChanged
     /// <summary>Until then (or if it fails to load) a globe glyph stands in.</summary>
     public Visibility GlyphVis => _icon is null ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>
+    /// The address the tab was asked to open. It stays until the page reports its own (Src), so a
+    /// tab that is still starting can already be kept in the session (win.sess.cs).
+    /// </summary>
+    public string? Asked { get; set; }
+
     /// <summary>Address of the favicon, kept for history and bookmarks.</summary>
     public string? IconSrc { get; private set; }
 

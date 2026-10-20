@@ -53,7 +53,7 @@ public sealed partial class Win : Window
         var ui = DispatcherQueue;
         Heartbeat.Start(a => ui.TryEnqueue(() => a()));
 
-        var tab = await Open(App.Cfg.Cur.Home);
+        var tab = await StartTabs();
 
         var core = tab.View.CoreWebView2;
         if (core is not null)
@@ -74,6 +74,9 @@ public sealed partial class Win : Window
         // A normal exit leaves this line; a crash does not.
         Log.Write("app", "window closed normally");
         Heartbeat.Stop();
+
+        // The open tabs are kept for the next start before anything is taken apart.
+        SaveSession();
 
         // A closed window must stop repainting itself when the colour changes.
         App.Look.Changed -= Paint;
@@ -105,11 +108,19 @@ public sealed partial class Win : Window
     // ---- tabs ----
 
     /// <summary>Opens a new tab, selects it and starts loading the address.</summary>
-    private async Task<Tab> Open(string? url)
+    private async Task<Tab> Open(string? url, int at = -1)
     {
-        var tab = new Tab(new WebView2());
+        // The address is worked out now, so the tab can be kept in the session while it starts.
+        var to = App.Find.Resolve(url ?? App.Cfg.Cur.Home);
+
+        var tab = new Tab(new WebView2()) { Asked = to };
         host.Children.Add(tab.View);
-        _tabs.Add(tab);
+
+        // A reopened tab goes back where it was; any other goes at the end.
+        if (at >= 0 && at <= _tabs.Count)
+            _tabs.Insert(at, tab);
+        else
+            _tabs.Add(tab);
         Log.Tabs = _tabs.Count;
         Log.Write("tab", $"open, tabs now {_tabs.Count}");
         Pick(tab);
@@ -150,7 +161,6 @@ public sealed partial class Win : Window
             System.Diagnostics.Debug.WriteLine("[keys] script failed: " + ex.Message);
         }
 
-        var to = App.Find.Resolve(url ?? App.Cfg.Cur.Home);
         if (to is not null)
             core.Navigate(to);
 
@@ -176,6 +186,7 @@ public sealed partial class Win : Window
         core.SourceChanged += (s, e) =>
         {
             tab.Src = core.Source;
+            SessionDirty();
             if (tab == _cur)
             {
                 ShowDom(tab);
@@ -228,6 +239,7 @@ public sealed partial class Win : Window
 
         ShowDom(tab);
         _ = Star();
+        SessionDirty();
     }
 
     /// <summary>Closes a tab. Closing the last one closes the window.</summary>
@@ -243,10 +255,14 @@ public sealed partial class Win : Window
             return;
         }
 
+        // Ctrl+Shift+T brings it back (win.sess.cs).
+        Remember(tab, i);
+
         host.Children.Remove(tab.View);
         _tabs.RemoveAt(i);
         Log.Tabs = _tabs.Count;
         Log.Write("tab", $"close, tabs now {_tabs.Count}");
+        SessionDirty();
         tab.View.Close();
 
         if (tab == _cur)
