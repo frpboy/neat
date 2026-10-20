@@ -131,8 +131,13 @@ internal static class Block
 
     /// <summary>
     /// One choice out of a group where only one can be on (the buttons that share a group name):
-    /// a round button with its label beside it, in a row as tall as the others. The whole row
-    /// can be clicked. Set the state before adding a handler, so building the page saves nothing.
+    /// a round button with its label beside it, in a row as tall as the others. Set the state
+    /// before adding a handler, so building the page saves nothing.
+    ///
+    /// The button is kept at its own height (32) and the row's height comes from the margin
+    /// round it. The round dot is drawn at the top of a 32-high box and the label is centred in
+    /// the button, so the two only line up when the button is that tall: made 52 high, the dot
+    /// stayed at the top while the label moved to the middle.
     /// </summary>
     public static RadioButton Choice(Skin s, string label, string group, bool on)
     {
@@ -142,14 +147,14 @@ internal static class Block
             GroupName = group,
             IsChecked = on,
             MinWidth = 0,
-            MinHeight = 52,
+            MinHeight = 32,
             Padding = new Thickness(8, 0, 0, 0),
-            Margin = new Thickness(16, 0, 16, 0),
+            Margin = new Thickness(16, 10, 16, 10),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Left,
             VerticalContentAlignment = VerticalAlignment.Center,
 
-            // Without a fill only the button and the text can be clicked, not the space between.
+            // Without a fill only the dot and the text can be clicked, not the space between.
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
         };
     }
