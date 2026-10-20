@@ -87,6 +87,7 @@ public sealed partial class Win
         _gen++;
         scrim.Visibility = Visibility.Collapsed;
         _hints.Clear();
+        ShowList(false);
     }
 
     /// <summary>Fills the list for what the box holds now.</summary>
@@ -133,7 +134,15 @@ public sealed partial class Win
         foreach (var r in rows)
             _hints.Add(r);
 
-        hints.Visibility = rows.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        ShowList(rows.Count > 0);
+    }
+
+    /// <summary>Shows or hides the list together with the thin line between it and the box.</summary>
+    private void ShowList(bool on)
+    {
+        var v = on ? Visibility.Visible : Visibility.Collapsed;
+        hints.Visibility = v;
+        rule.Visibility = v;
     }
 
     /// <summary>

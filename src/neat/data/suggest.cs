@@ -133,7 +133,7 @@ public static class Suggest
             if (t == skip || string.IsNullOrEmpty(t.Src) || !Hit(q, t.Title, t.Src) || !seen.Add(Key(t.Src)))
                 continue;
 
-            var h = Row(HintKind.Tab, t.Title, t.Src, "Switch to Tab", "\uE774", t);
+            var h = Row(HintKind.Tab, t.Title, t.Src, "Switch to Tab \u2192", "\uE774", t);
             h.UseIcon(t.Icon);
             rows.Add(h);
             n++;

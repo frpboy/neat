@@ -407,25 +407,63 @@
             Visibility="Collapsed"
             Background="#99000000"
             Tapped="scrim_Tapped">
+            <!-- The panel is wide and softly rounded. Its fill and border are solid colours: with a
+                 see-through fill and a see-through border laid over each other the edge came out
+                 uneven on the curves. The curve is also bigger now, and the box inside it has no
+                 frame of its own, so there is a single outline instead of one inside another. -->
             <Border
-                Width="640"
-                HorizontalAlignment="Center"
+                MaxWidth="720"
+                HorizontalAlignment="Stretch"
                 VerticalAlignment="Top"
-                Margin="0,140,0,0"
-                Padding="10"
-                CornerRadius="14"
-                Background="#F2141414"
-                BorderBrush="#33FFFFFF"
+                Margin="28,110,28,0"
+                Padding="8"
+                CornerRadius="22"
+                Background="#FF121212"
+                BorderBrush="#FF2E2E2E"
                 BorderThickness="1"
                 RequestedTheme="Dark"
                 Tapped="panel_Tapped">
-                <StackPanel Spacing="4">
-                    <!-- Second typing test. -->
-                    <TextBox
-                        x:Name="q"
-                        PlaceholderText="Search or Enter URL..."
-                        KeyDown="q_KeyDown"
-                        TextChanged="q_TextChanged"/>
+                <StackPanel>
+                    <Grid Height="52">
+                        <FontIcon
+                            Glyph="&#xE721;"
+                            FontSize="18"
+                            Margin="14,0,0,0"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Foreground="#B3FFFFFF"/>
+
+                        <!-- Second typing test. -->
+                        <!-- The box draws no background, frame or blue underline of its own. -->
+                        <TextBox
+                            x:Name="q"
+                            Margin="48,0,8,0"
+                            Padding="0,12"
+                            VerticalAlignment="Center"
+                            FontSize="18"
+                            PlaceholderText="Search or Enter URL..."
+                            KeyDown="q_KeyDown"
+                            TextChanged="q_TextChanged">
+                            <TextBox.Resources>
+                                <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
+                                <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
+                                <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
+                                <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                                <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent"/>
+                                <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent"/>
+                                <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent"/>
+                            </TextBox.Resources>
+                        </TextBox>
+                    </Grid>
+
+                    <!-- Thin line between the box and the list; shown together with the list (win.cmd.cs). -->
+                    <Border
+                        x:Name="rule"
+                        Height="1"
+                        Margin="6,2,6,6"
+                        Visibility="Collapsed"
+                        Background="#1FFFFFFF"/>
 
                     <!-- The suggestions (win.cmd.cs). The pick is moved from code with the arrow
                          keys while the cursor stays in the box above. Same selection setup as
@@ -437,7 +475,7 @@
                     <ListView
                         x:Name="hints"
                         Visibility="Collapsed"
-                        MaxHeight="400"
+                        MaxHeight="520"
                         SelectionMode="Single"
                         IsItemClickEnabled="True"
                         ItemClick="hints_ItemClick">
@@ -452,31 +490,44 @@
                             <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPointerOverBrush" Color="Transparent"/>
                             <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPressedBrush" Color="Transparent"/>
                         </ListView.Resources>
+
+                        <!-- Each row is a rounded block. 14 is the panel's curve (22) minus its
+                             padding (8), so the curves of the row and the panel run in parallel. -->
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                                <Setter Property="CornerRadius" Value="14"/>
+                                <Setter Property="Margin" Value="0,1"/>
+                                <Setter Property="Padding" Value="14,0"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="n:Hint">
                                 <Grid
-                                    Height="40"
-                                    ColumnSpacing="12"
+                                    Height="52"
+                                    ColumnSpacing="14"
                                     Background="Transparent">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="18"/>
+                                        <ColumnDefinition Width="20"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
                                     <Image
-                                        Width="16"
-                                        Height="16"
+                                        Width="20"
+                                        Height="20"
                                         Source="{x:Bind Icon, Mode=OneWay}"
                                         Visibility="{x:Bind IconVis, Mode=OneWay}"/>
                                     <FontIcon
                                         Glyph="{x:Bind Glyph}"
-                                        FontSize="14"
+                                        FontSize="16"
                                         Visibility="{x:Bind GlyphVis, Mode=OneWay}"/>
 
                                     <TextBlock
                                         Grid.Column="1"
                                         VerticalAlignment="Center"
+                                        FontSize="15"
                                         TextTrimming="CharacterEllipsis">
                                         <Run Text="{x:Bind Title}"/><Run Text="{x:Bind Sub}" Foreground="#99FFFFFF"/>
                                     </TextBlock>
@@ -484,8 +535,8 @@
                                     <TextBlock
                                         Grid.Column="2"
                                         VerticalAlignment="Center"
-                                        FontSize="12"
-                                        Foreground="#99FFFFFF"
+                                        FontSize="13"
+                                        Foreground="#B3FFFFFF"
                                         Text="{x:Bind Tag}"/>
                                 </Grid>
                             </DataTemplate>
