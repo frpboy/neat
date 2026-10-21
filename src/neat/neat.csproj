@@ -8,7 +8,7 @@
     <AssemblyName>neat</AssemblyName>
     <RootNamespace>neat</RootNamespace>
     <Product>NEAT Browser</Product>
-    <Version>0.15</Version>
+    <Version>0.16</Version>
 
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
