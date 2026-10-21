@@ -66,12 +66,19 @@ src/neat/
   data/db.cs        connections to browser.db
   data/history.cs   history table
   data/marks.cs     bookmarks table (flat list, no folders yet)
+  vault/vault.cs    password vault core, no screen yet: add, change, remove, list, reveal, lock
+  vault/types.cs    its results, the sign-in proof (Access), the secret that wipes itself, file shape
+  vault/seal.cs     AES-256-GCM sealing and the data that ties a value to its entry, site and field
+  vault/keywrap.cs  seals the data key for the Windows user (DPAPI, called directly, no package)
+  vault/origin.cs   the one way a site is written: scheme, host in ASCII, port
+tests/vault.check/  the vault's self-check (plain asserts, no packages), run by CI before the build
 ```
 
 ## Where data is saved
 
 Everything is under `%LOCALAPPDATA%\NEAT\`: `settings.json`, `browser.db`
-(history and bookmarks) and the `WebView2Profile` folder.
+(history and bookmarks), `session.json` (the open tabs) and the `WebView2Profile` folder.
+The password vault will keep its own file, `vault.json`, once it is wired in.
 
 If `settings.json` cannot be read (for example after a typo in a hand edit),
 NEAT starts with the defaults and keeps the damaged file as `settings.json.bad`.
