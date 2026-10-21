@@ -15,6 +15,15 @@ public partial class App : Application
     public static Search Find { get; private set; } = null!;
     public static Look Look { get; private set; } = null!;
 
+    private static Vault? _vault;
+
+    /// <summary>
+    /// The password vault, shared by every window. It is made the first time it is asked for, and
+    /// even then nothing is read or created until something calls Open on it, so a person who
+    /// never uses passwords never gets a vault file.
+    /// </summary>
+    public static Vault Vault => _vault ??= new Vault(Path.Combine(Env.Root, "vault.json"));
+
     public App()
     {
         // Must run before any WebView2 control is created, so the bundled

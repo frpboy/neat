@@ -100,6 +100,17 @@ public sealed class Access
 
     public bool Valid => _until > _now();
 
+    /// <summary>
+    /// Pushes the end out to <paramref name="lifetime"/> from now, because the person is still
+    /// working with the vault (the time that counts is the time since the last action). An access
+    /// that has already run out stays dead.
+    /// </summary>
+    public void Touch(TimeSpan lifetime)
+    {
+        if (Valid)
+            _until = _now() + lifetime;
+    }
+
     /// <summary>Ends it now (the machine locked, the person asked, NEAT sat idle).</summary>
     public void Revoke()
     {

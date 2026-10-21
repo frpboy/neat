@@ -199,6 +199,24 @@ public sealed class Vault : IDisposable
         }
     }
 
+    /// <summary>
+    /// Whether this is the NEAT password, without opening or changing anything: for asking for
+    /// the password again while the vault is already open. Counts wrong tries and makes the
+    /// person wait exactly like <see cref="Unlock"/>.
+    /// </summary>
+    public VaultResult Check(ReadOnlySpan<char> password)
+    {
+        lock (_gate)
+        {
+            if (_file is null || _file.Mode != ModePassword)
+                return VaultResult.Unavailable;
+
+            var result = TryPassword(password, out var key);
+            Seal.Wipe(key);
+            return result;
+        }
+    }
+
     /// <summary>Forgets the data key. The entries stay on disk, sealed.</summary>
     public void Lock()
     {

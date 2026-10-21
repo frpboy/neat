@@ -45,6 +45,13 @@ internal static class Program
         Run("the file is swapped in whole and leaves no temporary file", AtomicWrite);
         Run("origins are written one way", Origins);
         Run("a secret is wiped when disposed", SecretWiped);
+        Run("check tests a password without opening or changing anything", CheckPassword);
+        Run("the gate says what protects the vault", GateProtection);
+        Run("the gate asks Windows Hello, and an error is a no", GateHello);
+        Run("the gate opens a password vault with the password", GatePassword);
+        Run("an access lasts from the last use, not from the start", GateSliding);
+        Run("an unused access ends and a password vault is shut again", GateTickAndSignOut);
+        Run("the gate and the vault work together to reveal", GateReveal);
         Run("the vault code never logs", NoLogging);
         Run("the real number of PBKDF2 rounds works", RealRounds);
 
@@ -722,6 +729,260 @@ internal static class Program
         var again = new Vault(path, new Dpapi(), Rounds);
         Expect(again.Open() == OpenResult.Ready, "reopen on real DPAPI");
         Expect(RevealText(again, id) == "p", "entry opens on real DPAPI");
+    }
+
+    // ---- the gate ----
+
+    private static (Vault Vault, string Path) PasswordVault(string password = "the right password")
+    {
+        var path = TempFile();
+        var first = NewVault(path);
+        first.Open();
+        first.Add("https://example.com", "u", "the-secret");
+        first.UsePassword(password.AsSpan());
+
+        // A new session: shut until unlocked.
+        var v = NewVault(path);
+        v.Open();
+        return (v, path);
+    }
+
+    private static void CheckPassword()
+    {
+        var (v, _) = PasswordVault();
+        Expect(!v.IsOpen, "the vault starts shut");
+
+        Expect(v.Check("the right password".AsSpan()) == VaultResult.Ok, "the right password checks out");
+        Expect(!v.IsOpen, "checking must not open the vault");
+        Expect(v.Check("a wrong password".AsSpan()) == VaultResult.Wrong, "a wrong password does not");
+
+        // Wrong tries count, and the wait applies to Check as well as to Unlock.
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        v.Clock = () => now;
+        for (var i = 0; i < 4; i++)
+            v.Check("a wrong password".AsSpan());
+
+        Expect(v.Check("the right password".AsSpan()) == VaultResult.Wait, "the wait applies to Check");
+        now = now.AddMinutes(5);
+        Expect(v.Check("the right password".AsSpan()) == VaultResult.Ok, "Check works again after the wait");
+
+        var dpapi = NewVault(TempFile());
+        dpapi.Open();
+        Expect(dpapi.Check("anything at all".AsSpan()) == VaultResult.Unavailable, "no password to check in Dpapi mode");
+        Expect(NewVault(TempFile()).Check("anything at all".AsSpan()) == VaultResult.Unavailable, "nothing to check before the vault is read");
+    }
+
+    private static void GateProtection()
+    {
+        var dpapi = NewVault(TempFile());
+        dpapi.Open();
+
+        var hello = new FakeHello();
+        var gate = new Gate(dpapi, hello);
+
+        foreach (var (state, expected) in new[]
+        {
+            (HelloState.Ready, Protection.Hello),
+            (HelloState.NotSetUp, Protection.None),
+            (HelloState.Blocked, Protection.None),
+            (HelloState.NoDevice, Protection.None),
+            (HelloState.Unknown, Protection.None),
+        })
+        {
+            hello.State = state;
+            Expect(gate.ProtectionAsync().Result == expected, $"Windows protection with Hello {state} should be {expected}");
+            Expect(gate.Hello == state, "the gate keeps what Hello said");
+        }
+
+        // A password vault is protected by the password whatever Hello says.
+        var (pw, _) = PasswordVault();
+        hello.State = HelloState.NoDevice;
+        Expect(new Gate(pw, hello).ProtectionAsync().Result == Protection.Password, "password vault, no Hello");
+        hello.State = HelloState.Ready;
+        Expect(new Gate(pw, hello).ProtectionAsync().Result == Protection.Password, "password vault, Hello ready");
+
+        // Asking Hello fails: not usable, and no exception reaches the page.
+        hello.ThrowOnState = true;
+        Expect(gate.ProtectionAsync().Result == Protection.None, "a failing Hello check is not usable");
+        Expect(gate.Hello == HelloState.Unknown, "and is reported as unknown");
+
+        // A vault that was never read has nothing protecting it.
+        hello.ThrowOnState = false;
+        hello.State = HelloState.Ready;
+        Expect(new Gate(NewVault(TempFile()), hello).ProtectionAsync().Result == Protection.None, "an unread vault");
+    }
+
+    private static void GateHello()
+    {
+        var v = NewVault(TempFile());
+        v.Open();
+        var hello = new FakeHello { State = HelloState.Ready, Answer = true };
+        var gate = new Gate(v, hello);
+
+        Expect(gate.Current is null, "no access at the start");
+        Expect(gate.SignInAsync("Show the password for example.com").Result, "a yes from Hello opens an access");
+        Expect(gate.Current is { Valid: true }, "and it is valid");
+        Expect(hello.LastMessage == "Show the password for example.com", "Hello is shown the message");
+
+        gate.SignOut();
+        Expect(gate.Current is null, "sign out ends it");
+
+        hello.Answer = false;
+        Expect(!gate.SignInAsync("x").Result && gate.Current is null, "a no gives nothing");
+
+        hello.ThrowOnAsk = true;
+        Expect(!gate.SignInAsync("x").Result && gate.Current is null, "an error is a no, never a yes");
+
+        // Hello is for Windows protection only, and only with the vault open.
+        hello.ThrowOnAsk = false;
+        hello.Answer = true;
+        var (pw, _) = PasswordVault();
+        Expect(!new Gate(pw, hello).SignInAsync("x").Result, "a shut password vault is not opened by Hello");
+
+        // Even open (the password was typed this session), Hello is not the proof for a password vault.
+        pw.Unlock("the right password".AsSpan());
+        Expect(pw.IsOpen, "(sanity) the password vault is open");
+        Expect(!new Gate(pw, hello).SignInAsync("x").Result, "an open password vault is not given access by Hello");
+
+        // A vault whose key Windows will not open is not open, so there is nothing to give access to.
+        var path = TempFile();
+        NewVault(path).Open();
+        var shut = NewVault(path, new TestWrap(RandomNumberGenerator.GetBytes(32)));
+        shut.Open();
+        Expect(!shut.IsOpen, "(sanity) the vault is shut");
+        Expect(!new Gate(shut, hello).SignInAsync("x").Result, "a vault that is not open gives no access");
+    }
+
+    private static void GatePassword()
+    {
+        var (v, _) = PasswordVault();
+        var gate = new Gate(v, new FakeHello());
+
+        Expect(gate.SignIn("not the password".AsSpan()) == VaultResult.Wrong, "wrong password");
+        Expect(gate.Current is null && !v.IsOpen, "a wrong password gives no access and leaves the vault shut");
+
+        Expect(gate.SignIn("the right password".AsSpan()) == VaultResult.Ok, "right password");
+        Expect(gate.Current is { Valid: true } && v.IsOpen, "an access, and the vault is open");
+
+        // Open already: the password is only checked.
+        gate.SignOut();
+        Expect(!v.IsOpen, "sign out shuts a password vault");
+        Expect(gate.SignIn("the right password".AsSpan()) == VaultResult.Ok, "sign in again");
+
+        var dpapi = NewVault(TempFile());
+        dpapi.Open();
+        Expect(new Gate(dpapi, new FakeHello()).SignIn("x".AsSpan()) == VaultResult.Unavailable, "no password for a Windows-protected vault");
+    }
+
+    private static void GateSliding()
+    {
+        var v = NewVault(TempFile());
+        v.Open();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var gate = new Gate(v, new FakeHello { State = HelloState.Ready, Answer = true }) { Clock = () => now };
+
+        gate.SignInAsync("x").Wait();
+        var access = gate.Current!;
+
+        now = now.AddMinutes(2);
+        Expect(access.Valid, "still valid after 2 minutes");
+        gate.Touch();
+
+        now = now.AddMinutes(2);
+        Expect(access.Valid, "4 minutes after the start but 2 after the last use: still valid");
+
+        now = now.AddMinutes(1.5);
+        Expect(!access.Valid && gate.Current is null, "3 minutes after the last use it has run out");
+
+        // A dead access stays dead.
+        gate.Touch();
+        Expect(!access.Valid, "touching a dead access does not bring it back");
+    }
+
+    private static void GateTickAndSignOut()
+    {
+        // Password vault: the end of the access shuts the vault.
+        var (v, _) = PasswordVault();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var gate = new Gate(v, new FakeHello()) { Clock = () => now };
+        gate.SignIn("the right password".AsSpan());
+
+        Expect(!gate.Tick(), "nothing to end while the access is valid");
+        now = now.AddMinutes(4);
+        Expect(gate.Tick(), "the access has run out");
+        Expect(!v.IsOpen && gate.Current is null, "the vault is shut and the access is gone");
+        Expect(!gate.Tick(), "it says so only once");
+
+        // Windows-protected vault: the vault stays open, only the access ends.
+        var dpapi = NewVault(TempFile());
+        dpapi.Open();
+        var id = dpapi.Add("https://example.com", "u", "p");
+        var clock = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var g2 = new Gate(dpapi, new FakeHello { State = HelloState.Ready, Answer = true }) { Clock = () => clock };
+        g2.SignInAsync("x").Wait();
+        var old = g2.Current!;
+
+        clock = clock.AddMinutes(4);
+        Expect(g2.Tick() && dpapi.IsOpen, "the access ends, the Windows-protected vault stays open");
+        ExpectThrows<UnauthorizedAccessException>(() => dpapi.Reveal(id, old), "the old access no longer reveals");
+
+        g2.SignInAsync("x").Wait();
+        var fresh = g2.Current!;
+        g2.SignOut();
+        ExpectThrows<UnauthorizedAccessException>(() => dpapi.Reveal(id, fresh), "sign out ends the access at once");
+        Expect(dpapi.IsOpen, "sign out leaves a Windows-protected vault open");
+    }
+
+    private static void GateReveal()
+    {
+        var v = NewVault(TempFile());
+        v.Open();
+        var id = v.Add("https://example.com", "u", "the-secret");
+
+        var gate = new Gate(v, new FakeHello { State = HelloState.Ready, Answer = true });
+        Expect(gate.Current is null, "no access, nothing to reveal with");
+        gate.SignInAsync("x").Wait();
+
+        using (var secret = v.Reveal(id, gate.Current!))
+            Expect(secret!.Text() == "the-secret", "revealed through the gate's access");
+
+        // Setting a password: the person just typed it twice, so an access is granted.
+        Expect(v.UsePassword("a fresh password".AsSpan()) == VaultResult.Ok, "switch to a password");
+        gate.SignOut();
+        Expect(!v.IsOpen, "the password vault is shut by sign out");
+        gate.SignIn("a fresh password".AsSpan());
+        using (var secret = v.Reveal(id, gate.Current!))
+            Expect(secret!.Text() == "the-secret", "revealed after the password");
+
+        var granted = NewVault(TempFile());
+        granted.Open();
+        var g3 = new Gate(granted, new FakeHello());
+        g3.Grant();
+        Expect(g3.Current is { Valid: true }, "grant starts an access");
+    }
+
+    private sealed class FakeHello : IHello
+    {
+        public HelloState State { get; set; } = HelloState.Ready;
+
+        public bool Answer { get; set; }
+
+        public bool ThrowOnState { get; set; }
+
+        public bool ThrowOnAsk { get; set; }
+
+        public string? LastMessage { get; private set; }
+
+        public Task<HelloState> StateAsync()
+        {
+            return ThrowOnState ? throw new InvalidOperationException("no Hello") : Task.FromResult(State);
+        }
+
+        public Task<bool> AskAsync(string message)
+        {
+            LastMessage = message;
+            return ThrowOnAsk ? throw new InvalidOperationException("no Hello") : Task.FromResult(Answer);
+        }
     }
 
     // ---- a stand-in for DPAPI that works anywhere ----

@@ -71,6 +71,11 @@ src/neat/
   vault/seal.cs     AES-256-GCM sealing and the data that ties a value to its entry, site and field
   vault/keywrap.cs  seals the data key for the Windows user (DPAPI, called directly, no package)
   vault/origin.cs   the one way a site is written: scheme, host in ASCII, port
+  vault/gate.cs     the gate: who may show, copy or delete a password (Hello or NEAT password), how long
+  pass/hello.cs     Windows Hello, behind the gate's IHello
+  pass/clip.cs      copy to the clipboard: not in history or cloud, cleared after 30 seconds
+  opts.pass.cs      Settings > Passwords: protection, saved logins, show / copy / delete
+  opts.pass.task.cs the cards that page opens: add a login, set or change the NEAT password, confirm a delete
 tests/vault.check/  the vault's self-check (plain asserts, no packages), run by CI before the build
 ```
 
@@ -78,7 +83,7 @@ tests/vault.check/  the vault's self-check (plain asserts, no packages), run by 
 
 Everything is under `%LOCALAPPDATA%\NEAT\`: `settings.json`, `browser.db`
 (history and bookmarks), `session.json` (the open tabs) and the `WebView2Profile` folder.
-The password vault will keep its own file, `vault.json`, once it is wired in.
+The password vault is `vault.json`, made the first time the Passwords page is opened.
 
 If `settings.json` cannot be read (for example after a typo in a hand edit),
 NEAT starts with the defaults and keeps the damaged file as `settings.json.bad`.

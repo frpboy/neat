@@ -17,8 +17,8 @@ namespace neat;
 /// empty strip along the top (drag it to move the window), the system close
 /// button, and under that a row of tabs, icon above label, like Arc's. The
 /// pages are built in code from the blocks in ui/block.cs, one file each:
-/// opts.gen.cs (General), opts.look.cs (Appearance), opts.keys.cs (Shortcuts)
-/// and opts.about.cs (About).
+/// opts.gen.cs (General), opts.look.cs (Appearance), opts.pass.cs and
+/// opts.pass.task.cs (Passwords), opts.keys.cs (Shortcuts) and opts.about.cs (About).
 ///
 /// Its colours come from the same window colour as the browser window
 /// (App.Look), through a Skin of its own, and follow it live.
@@ -32,12 +32,14 @@ public sealed partial class Opts : Window
     // The icon file copied next to neat.exe by neat.csproj (the same file as the exe's own icon).
     private const string Ico = "neat.ico";
 
-    // Tab name and its glyph. All four are in both Segoe Fluent Icons and Segoe MDL2 Assets
-    // (Windows 10 only has the second): Setting, Color, KeyboardClassic and Info.
+    // Tab name and its glyph. All five are in both Segoe Fluent Icons and Segoe MDL2 Assets
+    // (Windows 10 only has the second): Setting, Color, Lock, KeyboardClassic and Info.
+    // The Passwords page is the third one: PassAt in opts.pass.cs says so.
     private static readonly (string Name, string Glyph)[] Pages =
     {
         ("General", "\uE713"),
         ("Appearance", "\uE790"),
+        ("Passwords", "\uE72E"),
         ("Shortcuts", "\uE765"),
         ("About", "\uE946"),
     };
@@ -179,6 +181,10 @@ public sealed partial class Opts : Window
         _home = null;
         _box = null;
 
+        // Leaving the Passwords page ends the sign-in and shuts a password vault.
+        if (_at == PassAt)
+            LeavePass();
+
         // The colour menu of the page being left stops following the colour.
         _pk?.Detach();
         _pk = null;
@@ -193,8 +199,9 @@ public sealed partial class Opts : Window
         {
             0 => BuildGen(),
             1 => BuildLook(),
-            2 => BuildKeys(),
-            3 => BuildAbout(),
+            2 => BuildPass(),
+            3 => BuildKeys(),
+            4 => BuildAbout(),
             _ => Block.Page(),
         };
         Fit();
@@ -252,6 +259,11 @@ public sealed partial class Opts : Window
         // Esc and the close button do not move focus first, so a half-typed
         // home page would be lost without this.
         Flush();
+
+        // The sign-in ends and a password vault is shut, and a password copied a moment ago
+        // comes off the clipboard: once this window is gone nothing else would do it.
+        LeavePass();
+        _clip?.ClearNow();
 
         // A closing window does not reliably tell its content it is unloaded, so the
         // colour menu is told to stop following the colour here.
