@@ -39,7 +39,7 @@ public sealed partial class Opts
     private static OpenResult? _vaultOpen;
 
     private Gate? _gate;
-    private Clip? _clip;
+    private SecretClip? _clip;
     private DispatcherQueueTimer? _sweep;
     private DispatcherQueueTimer? _hide;
 
@@ -64,7 +64,7 @@ public sealed partial class Opts
     private UIElement BuildPass()
     {
         _gate ??= new Gate(App.Vault, new Hello(() => WinRT.Interop.WindowNative.GetWindowHandle(this)));
-        _clip ??= new Clip(DispatcherQueue);
+        _clip ??= new SecretClip(DispatcherQueue);
         _sweep ??= MakeTimer(SweepEvery, true, Sweep);
         _hide ??= MakeTimer(ShowFor, false, HideShown);
 
@@ -525,7 +525,7 @@ public sealed partial class Opts
         }
 
         _clip?.Copy(secret.Text());
-        Say("Copied. It is taken off the clipboard after " + (int)Clip.Keep.TotalSeconds + " seconds.");
+        Say("Copied. It is taken off the clipboard after " + (int)SecretClip.Keep.TotalSeconds + " seconds.");
     }
 
     private async Task DeleteRow(LoginInfo it)

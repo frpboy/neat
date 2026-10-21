@@ -18,8 +18,12 @@ namespace neat;
 ///
 /// A password copied to the clipboard can still be read by any program running as the user
 /// while it is there. This only shortens that time.
+///
+/// This file is pass/clip.cs and the class is SecretClip. ui/clip.cs holds a different class,
+/// Clip, the plain "put this text on the clipboard" helper for everything else; it keeps no
+/// history exclusion and clears nothing, which is why a password does not use it.
 /// </summary>
-internal sealed class Clip
+internal sealed class SecretClip
 {
     public static readonly TimeSpan Keep = TimeSpan.FromSeconds(30);
 
@@ -28,7 +32,7 @@ internal sealed class Clip
     // What was put on the clipboard, kept only until it is cleared, to know it is still ours.
     private string? _text;
 
-    public Clip(DispatcherQueue queue)
+    public SecretClip(DispatcherQueue queue)
     {
         _timer = queue.CreateTimer();
         _timer.Interval = Keep;

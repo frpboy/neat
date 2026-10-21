@@ -73,7 +73,7 @@ src/neat/
   vault/origin.cs   the one way a site is written: scheme, host in ASCII, port
   vault/gate.cs     the gate: who may show, copy or delete a password (Hello or NEAT password), how long
   pass/hello.cs     Windows Hello, behind the gate's IHello
-  pass/clip.cs      copy to the clipboard: not in history or cloud, cleared after 30 seconds
+  pass/clip.cs      SecretClip: copy a password, not in clipboard history or cloud, cleared after 30 seconds
   opts.pass.cs      Settings > Passwords: protection, saved logins, show / copy / delete
   opts.pass.task.cs the cards that page opens: add a login, set or change the NEAT password, confirm a delete
 tests/vault.check/  the vault's self-check (plain asserts, no packages), run by CI before the build
