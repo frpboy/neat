@@ -78,6 +78,12 @@ public sealed record LoginInfo(
     bool Damaged);
 
 /// <summary>
+/// What <see cref="Vault.Lookup"/> found for a login seen on a page: whether the same user name is
+/// already saved for that site, which entry it is, and whether its password is the same one.
+/// </summary>
+public sealed record LoginMatch(Guid? Id, bool SamePassword);
+
+/// <summary>
 /// Proof that the person just passed the gate (Windows Hello or the NEAT password). Only the
 /// sign-in code makes one, and <see cref="Vault.Reveal"/> will not show a password without a
 /// valid one. It runs out after the time it was made with.

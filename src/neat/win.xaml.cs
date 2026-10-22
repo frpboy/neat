@@ -78,6 +78,9 @@ public sealed partial class Win : Window
         // The open tabs are kept for the next start before anything is taken apart.
         SaveSession();
 
+        // Logins that were held in memory are let go.
+        ForgetLogins();
+
         // A closed window must stop repainting itself when the colour changes.
         App.Look.Changed -= Paint;
 
@@ -148,6 +151,7 @@ public sealed partial class Win : Window
         }
 
         Hook(tab, core);
+        HookPass(tab, core);
 
         // Must be in place before the first page loads. Without it only the
         // shortcuts for the window's own controls work, so a failure here
@@ -160,6 +164,9 @@ public sealed partial class Win : Window
         {
             System.Diagnostics.Debug.WriteLine("[keys] script failed: " + ex.Message);
         }
+
+        // The script of the save-password bubble (win.pass.cs), in place for the same reason.
+        await AddPassScript(core);
 
         if (to is not null)
             core.Navigate(to);
@@ -175,7 +182,7 @@ public sealed partial class Win : Window
         core.ProcessFailed += (s, e) => Log.Write("webview",
             $"process failed: {e.ProcessFailedKind}, reason {e.Reason}, exit code {e.ExitCode}, {e.ProcessDescription}; tabs {_tabs.Count}");
 
-        core.WebMessageReceived += (s, e) => OnKey(tab, e.TryGetWebMessageAsString());
+        core.WebMessageReceived += (s, e) => OnMessage(tab, e);
 
         core.DocumentTitleChanged += (s, e) =>
         {
@@ -240,6 +247,9 @@ public sealed partial class Win : Window
         ShowDom(tab);
         _ = Star();
         SessionDirty();
+
+        // A question about a login belongs to the tab it was asked in.
+        HideBubble();
     }
 
     /// <summary>Closes a tab. Closing the last one closes the window.</summary>
@@ -257,6 +267,9 @@ public sealed partial class Win : Window
 
         // Ctrl+Shift+T brings it back (win.sess.cs).
         Remember(tab, i);
+
+        // A login that was waiting to find out how it went is not offered for a closed tab.
+        _capture.Drop(tab);
 
         host.Children.Remove(tab.View);
         _tabs.RemoveAt(i);

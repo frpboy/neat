@@ -78,6 +78,12 @@ public sealed class Prefs
     /// <summary>What opens at startup: the home page, or the tabs of last time.</summary>
     public StartMode Start { get; set; } = StartMode.Home;
 
+    /// <summary>
+    /// Sites the person said never to offer to save a password for ("Never for this site"). Origins,
+    /// written one way (see vault/never.cs).
+    /// </summary>
+    public List<string> NeverSave { get; set; } = new();
+
     /// <summary>Name of the engine in use. Must match one of Engines.</summary>
     public string Use { get; set; } = "Google";
 

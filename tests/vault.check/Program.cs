@@ -52,6 +52,12 @@ internal static class Program
         Run("an access lasts from the last use, not from the start", GateSliding);
         Run("an unused access ends and a password vault is shut again", GateTickAndSignOut);
         Run("the gate and the vault work together to reveal", GateReveal);
+        Run("lookup tells new, changed and already-saved logins apart", LookupLogins);
+        Run("lookup never opens another site's entries", LookupOrigins);
+        Run("a held login waits, expires and is taken once", CaptureHold);
+        Run("a login that is not worth holding is refused", CaptureRefuse);
+        Run("offers for one site are spaced out", CaptureCooldown);
+        Run("the never-save list keeps only clean origins", NeverList);
         Run("the vault code never logs", NoLogging);
         Run("the real number of PBKDF2 rounds works", RealRounds);
 
@@ -959,6 +965,138 @@ internal static class Program
         var g3 = new Gate(granted, new FakeHello());
         g3.Grant();
         Expect(g3.Current is { Valid: true }, "grant starts an access");
+    }
+
+    // ---- capturing logins ----
+
+    private static void LookupLogins()
+    {
+        var v = NewVault(TempFile());
+        v.Open();
+        var id = v.Add("https://example.com", "alice", "correct-password");
+
+        var same = v.Lookup("https://example.com/login", "alice", "correct-password");
+        Expect(same.Id == id && same.SamePassword, "the saved login is recognised");
+
+        var changed = v.Lookup("https://example.com/", "alice", "a-new-password");
+        Expect(changed.Id == id && !changed.SamePassword, "same user, other password: offer to update that entry");
+
+        var other = v.Lookup("https://example.com/", "bob", "correct-password");
+        Expect(other.Id is null && !other.SamePassword, "another user name is a new login");
+
+        Expect(v.Lookup("https://example.com", "ALICE", "correct-password").Id is null, "user names are matched exactly");
+        Expect(v.Lookup("https://example.com", "alice", "Correct-password").Id == id && !v.Lookup("https://example.com", "alice", "Correct-password").SamePassword, "passwords are matched exactly");
+
+        // Two entries for one user (an old and a new password): the one that matches wins.
+        var second = v.Add("https://example.com", "alice", "second-password");
+        Expect(v.Lookup("https://example.com", "alice", "second-password").Id == second, "the matching entry is found among several");
+        Expect(v.Lookup("https://example.com", "alice", "second-password").SamePassword, "and is the same password");
+
+        // An empty user name is a user name too.
+        v.Add("https://example.com", "", "no-name-password");
+        Expect(v.Lookup("https://example.com", "", "no-name-password").SamePassword, "a login without a user name");
+    }
+
+    private static void LookupOrigins()
+    {
+        var v = NewVault(TempFile());
+        v.Open();
+        v.Add("https://bank.example", "alice", "p4ss");
+
+        Expect(v.Lookup("http://bank.example", "alice", "p4ss").Id is null, "http is another origin");
+        Expect(v.Lookup("https://bank.example.evil.example", "alice", "p4ss").Id is null, "a look-alike host");
+        Expect(v.Lookup("https://bank.example:8443", "alice", "p4ss").Id is null, "another port");
+        Expect(v.Lookup("not an address", "alice", "p4ss").Id is null, "not an address");
+
+        var shut = NewVault(TempFile());
+        ExpectThrows<InvalidOperationException>(() => shut.Lookup("https://bank.example", "a", "b"), "a vault that is not open cannot be asked");
+    }
+
+    private static void CaptureHold()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var capture = new Capture { Clock = () => now };
+        var tab = new object();
+        var other = new object();
+
+        Expect(capture.Hold(tab, "https://Example.com/login", "alice", "secret"), "held");
+        Expect(capture.Holds(tab) && !capture.Holds(other), "held for that tab only");
+
+        var taken = capture.Take(tab);
+        Expect(taken is { Site: "https://example.com", User: "alice", Password: "secret" }, "taken with the origin, not the address");
+        Expect(capture.Take(tab) is null && !capture.Holds(tab), "taken only once");
+
+        // A second login replaces the first.
+        capture.Hold(tab, "https://example.com", "alice", "first");
+        capture.Hold(tab, "https://example.com", "alice", "second");
+        Expect(capture.Take(tab)!.Password == "second", "the latest login is the one held");
+
+        // Waiting too long.
+        capture.Hold(tab, "https://example.com", "alice", "secret");
+        now = now.AddSeconds(14);
+        Expect(capture.Holds(tab), "still held after 14 seconds");
+        now = now.AddSeconds(2);
+        Expect(!capture.Holds(tab) && capture.Take(tab) is null, "gone after 16 seconds");
+        Expect(!capture.Holds(tab), "and nothing is left behind");
+
+        capture.Hold(tab, "https://example.com", "alice", "secret");
+        capture.Drop(tab);
+        Expect(capture.Take(tab) is null, "dropped means gone");
+
+        capture.Hold(tab, "https://example.com", "a", "b");
+        capture.Hold(other, "https://example.com", "a", "b");
+        capture.Clear();
+        Expect(!capture.Holds(tab) && !capture.Holds(other), "clear forgets all");
+    }
+
+    private static void CaptureRefuse()
+    {
+        var capture = new Capture();
+        var tab = new object();
+
+        Expect(!capture.Hold(tab, "https://example.com", "alice", ""), "no password");
+        Expect(!capture.Hold(tab, "javascript:alert(1)", "alice", "p"), "not a web address");
+        Expect(!capture.Hold(tab, "about:blank", "alice", "p"), "about:blank");
+        Expect(!capture.Hold(tab, "https://example.com", "alice", new string('x', Capture.MaxLength + 1)), "a password that long is not a login");
+        Expect(!capture.Hold(tab, "https://example.com", new string('x', Capture.MaxLength + 1), "p"), "a user name that long is not a login");
+        Expect(!capture.Holds(tab), "nothing was held");
+
+        Expect(capture.Hold(tab, "https://example.com", "", "p"), "an empty user name is fine");
+        Expect(capture.Hold(tab, "https://example.com", new string('x', Capture.MaxLength), new string('y', Capture.MaxLength)), "exactly the longest is fine");
+    }
+
+    private static void CaptureCooldown()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var capture = new Capture { Clock = () => now };
+
+        Expect(capture.MayOffer("https://a.example"), "the first offer");
+        Expect(!capture.MayOffer("https://a.example"), "not again at once");
+        Expect(capture.MayOffer("https://b.example"), "another site is separate");
+
+        now = now.AddSeconds(19);
+        Expect(!capture.MayOffer("https://a.example"), "still waiting after 19 seconds");
+        now = now.AddSeconds(2);
+        Expect(capture.MayOffer("https://a.example"), "allowed again after 21 seconds");
+    }
+
+    private static void NeverList()
+    {
+        var list = new List<string>();
+        Expect(Never.Add(list, "https://example.com"), "added");
+        Expect(!Never.Add(list, "https://example.com"), "not twice");
+        Expect(!Never.Add(list, "https://example.com/login"), "an address that is not an origin is refused");
+        Expect(!Never.Add(list, "HTTPS://EXAMPLE.COM"), "so is one written another way");
+        Expect(!Never.Add(list, "javascript:1"), "and a non-web one");
+        Expect(Never.Has(list, "https://example.com") && !Never.Has(list, "http://example.com"), "http is another origin");
+
+        var clean = Never.Clean(new[] { "https://a.example/", "https://A.example", "junk", "", "http://b.example:80", "https://a.example" });
+        Expect(clean.SequenceEqual(new[] { "https://a.example", "http://b.example" }), "cleaned: " + string.Join(",", clean));
+        Expect(Never.Clean(null).Count == 0, "null is an empty list");
+
+        var full = Enumerable.Range(0, Never.Max).Select(i => $"https://site{i}.example").ToList();
+        Expect(!Never.Add(full, "https://one-more.example"), "a full list takes no more");
+        Expect(Never.Clean(full.Concat(new[] { "https://extra.example" })).Count == Never.Max, "a long list is cut to the limit");
     }
 
     private sealed class FakeHello : IHello

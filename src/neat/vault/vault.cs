@@ -269,6 +269,58 @@ public sealed class Vault : IDisposable
     }
 
     /// <summary>
+    /// Whether a login seen on a page is already saved, for deciding whether to offer to save it:
+    /// nothing saved for this user name on this site, saved with another password (offer to
+    /// update), or saved exactly (offer nothing). It answers only yes or no and never hands out a
+    /// saved value, so it does not need a sign-in; it is meant for the login the page itself has
+    /// just shown to NEAT, for the page's own origin, and for nothing else.
+    /// </summary>
+    public LoginMatch Lookup(string site, string user, string password)
+    {
+        var origin = Origin.Of(site);
+        if (origin is null)
+            return new LoginMatch(null, false);
+
+        var wantUser = Encoding.UTF8.GetBytes(user);
+        var wantPass = Encoding.UTF8.GetBytes(password);
+
+        try
+        {
+            lock (_gate)
+            {
+                var key = Key();
+                Guid? first = null;
+
+                foreach (var row in _file!.Logins.Where(r => r.Site == origin))
+                {
+                    var have = Open(key, row, "user");
+                    var sameUser = have is not null && CryptographicOperations.FixedTimeEquals(have, wantUser);
+                    Seal.Wipe(have);
+
+                    if (!sameUser || !Guid.TryParse(row.Id, out var id))
+                        continue;
+
+                    first ??= id;
+
+                    var pass = Open(key, row, "pass");
+                    var samePass = pass is not null && CryptographicOperations.FixedTimeEquals(pass, wantPass);
+                    Seal.Wipe(pass);
+
+                    if (samePass)
+                        return new LoginMatch(id, true);
+                }
+
+                return new LoginMatch(first, false);
+            }
+        }
+        finally
+        {
+            Seal.Wipe(wantUser);
+            Seal.Wipe(wantPass);
+        }
+    }
+
+    /// <summary>
     /// The password of an entry, only for someone who has just passed the gate. Null when there
     /// is no such entry or it does not check out. Dispose the result when done.
     /// </summary>

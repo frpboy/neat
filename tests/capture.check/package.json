@@ -1,0 +1,11 @@
+{
+  "name": "capture-check",
+  "private": true,
+  "description": "Self-check of the save-password page script (src/neat/pass/capture.cs). Run: npm ci, then node check.js",
+  "scripts": {
+    "test": "node check.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.3"
+  }
+}

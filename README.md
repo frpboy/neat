@@ -72,11 +72,16 @@ src/neat/
   vault/keywrap.cs  seals the data key for the Windows user (DPAPI, called directly, no package)
   vault/origin.cs   the one way a site is written: scheme, host in ASCII, port
   vault/gate.cs     the gate: who may show, copy or delete a password (Hello or NEAT password), how long
+  vault/capture.cs  a login a page just showed, held until it is known whether the login worked
+  vault/never.cs    the sites the person said never to offer to save a password for (kept in settings.json)
+  pass/capture.cs   the two page scripts of the save-password bubble (JavaScript in C# strings)
+  win.pass.cs       the save-password bubble: takes the page's report, decides what to offer, shows the bubble
   pass/hello.cs     Windows Hello, behind the gate's IHello
   pass/clip.cs      SecretClip: copy a password, not in clipboard history or cloud, cleared after 30 seconds
   opts.pass.cs      Settings > Passwords: protection, saved logins, show / copy / delete
   opts.pass.task.cs the cards that page opens: add a login, set or change the NEAT password, confirm a delete
 tests/vault.check/  the vault's self-check (plain asserts, no packages), run by CI before the build
+tests/capture.check/ the page script's self-check: made-up login forms in jsdom (needs Node; npm ci, node check.js)
 ```
 
 ## Where data is saved
