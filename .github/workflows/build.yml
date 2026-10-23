@@ -20,6 +20,22 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Run password-vault self-check
+        run: dotnet run --project tests/vault.check/vault.check.csproj --configuration Release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install capture-check dependencies
+        working-directory: tests/capture.check
+        run: npm ci
+
+      - name: Run password-capture self-check
+        working-directory: tests/capture.check
+        run: npm test
+
       - name: Run session recovery self-check
         run: dotnet run --project tests/session.check/session.check.csproj --configuration Release
 
