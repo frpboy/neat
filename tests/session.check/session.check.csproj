@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <Compile Include="..\..\src\neat\data\session.cs" Link="session.cs" />
-    <Compile Include="..\..\src\neat\web\log.cs" Link="web\log.cs" />
   </ItemGroup>
 
 </Project>
