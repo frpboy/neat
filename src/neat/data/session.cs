@@ -42,8 +42,11 @@ public sealed class Session
                 var s = JsonSerializer.Deserialize<Snap>(File.ReadAllText(_path), Opt);
                 if (s is not null)
                 {
+                    // System.Text.Json can populate List<string> with null values from JSON even
+                    // though the C# element type is non-nullable. Do not allow one bad entry to
+                    // reach StartTabs/Open and disrupt session recovery.
                     s.Urls ??= new List<string>();
-                    s.Urls.RemoveAll(string.IsNullOrWhiteSpace);
+                    s.Urls.RemoveAll(url => string.IsNullOrWhiteSpace(url));
                     s.Active = Math.Clamp(s.Active, 0, Math.Max(0, s.Urls.Count - 1));
                     return s;
                 }
