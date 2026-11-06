@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -19,6 +21,22 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Run password-vault self-check
+        run: dotnet run --project tests/vault.check/vault.check.csproj --configuration Release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install capture-check dependencies
+        working-directory: tests/capture.check
+        run: npm ci
+
+      - name: Run password-capture self-check
+        working-directory: tests/capture.check
+        run: npm test
 
       - name: Restore
         run: dotnet restore src/neat/neat.csproj -p:Platform=x64
